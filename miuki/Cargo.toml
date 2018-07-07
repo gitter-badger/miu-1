@@ -1,6 +1,16 @@
 [package]
 name = "miuki"
-version = "0.1.0"
-authors = ["theindigamer <theindigamer15@gmail.com>"]
+version = "0.0.0"
+authors = ["Varun Gandhi <theindigamer15@gmail.com>"]
+
+[lib]
+name = "miuki"
+path = "src/miuki.rs"
+
+[[bin]]
+name = "miu"
+path = "src/main.rs"
 
 [dependencies]
+lalrpop = "^0.15.2"
+typed-arena = "^1.4.1"
