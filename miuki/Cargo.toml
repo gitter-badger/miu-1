@@ -2,6 +2,7 @@
 name = "miuki"
 version = "0.0.0"
 authors = ["Varun Gandhi <theindigamer15@gmail.com>"]
+build = "build.rs"
 
 [lib]
 name = "miuki"
@@ -11,6 +12,13 @@ path = "src/miuki.rs"
 name = "miu"
 path = "src/main.rs"
 
+[build-dependencies.lalrpop]
+path = 'lalrpop/lalrpop'
+
+[dependencies.lalrpop-util]
+path = 'lalrpop/lalrpop-util'
+
 [dependencies]
-lalrpop = "^0.15.2"
 typed-arena = "^1.4.1"
+ramp = "^0.4.1"
+regex = "*"
