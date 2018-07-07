@@ -1,0 +1,6 @@
+[package]
+name = "miuki"
+version = "0.1.0"
+authors = ["theindigamer <theindigamer15@gmail.com>"]
+
+[dependencies]
