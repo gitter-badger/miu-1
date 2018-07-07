@@ -9,7 +9,7 @@ Note: This document heavily borrows from the nicely written
 Introduction
 ************
 
-Suggested emojis: U+1f326 🌦 or U+1f36d 🍭 (once we have linear types!).
+Suggested emojis: U+1f326 🌦 or U+1f36d 🍭 (once/if we have linear types!).
 
 Notational conventions
 ======================
@@ -58,12 +58,21 @@ Shebang
 A shebang ``#!`` is allowed at the very beginning of the file following the Unix convention.
 For example, the following should work if the file is set as an executable::
 
-  #!/usr/bin/env miu-run
+  #!/usr/bin/env miu-interpret
+
+Conditional Compilation
+=======================
+
+::
+  #ifdef HAVE_TIME
+  [TODO: This section.]
+  #endif
 
 Identifiers and Holes
 =====================
 
-(TODO: review this more carefully.)
+Identifiers
+-----------
 
 Legal identifiers have the following specification::
 
@@ -78,13 +87,35 @@ Legal identifiers have the following specification::
   token ident = ident-start-char ident-mid-char* ident-end-char?
   token open-variant-ident = '^' ('\Lu' | '\Lt' | '\Lo') ident-mid-char* ident-end-char?
 
-We also support holes to allow better editor support for users::
+Holes
+-----
+
+There are two kinds of holes:
+
+#. Informative holes - These allow the user to tell the compiler "hey, I don't
+   know what should be here, can you give me some suggestions?". Informative
+   holes can be named/numbered.
+#. Abbreviation holes - These allow the user to tell the compiler "hey, I know
+   there is something here, infer it, and keep your mouth shut." They can serve
+   as documentation while refactoring without making type signatures very large.
+
+Holes are supported to allow for a better interactive experience::
 
   regex ident-hole = _
   regex hole-name-char = letter-char | digit-char
   token hole = _ hole-name-char*
   token pattern-hole = __ hole-name-char*
+  token or-pattern-hole = __|
   token abbrev-hole = ".."
+
+Examples::
+
+  let foo = Just 10 : .. Int -- analagous to 'Just @Int 10' in Haskell
+  let bar : _  = f x  -- compiler will suggest the type to fill for _
+  let baz : _1 = f2 y
+  let qux : _1 = f3 z -- compiler will suggest an option with the constraint that
+                      -- the two _1's match; the "rewrite action" will include a
+                      -- renaming for all _1 holes
 
 Keywords
 ========
@@ -102,7 +133,7 @@ literals::
     foreign volatile
     atomic
 
-  token contextual-ident-keyword = family map
+  token contextual-ident-keyword = family map default
 
   token reserved-ident-keyword =
     atomic functor comptime tailcall
@@ -110,14 +141,14 @@ literals::
   token backslash-op = "\\"
 
   token symbolic-keyword =
-    -> <- -o ==> | \ . : .. ; = ? ??
+    -> <- -o | \ . : .. ; = ? ??
     ( ) $(
     [ ] $[ [> [< >] <] [| |]
     { } ${ {> {< >} <}
     -(ident)->
     ->} -o}
 
-  token contextual-symbolic-keyword = "=="
+  token contextual-symbolic-keyword = "==" "==>"
 
   token reserved-symbolic-keyword = `
 
@@ -135,7 +166,6 @@ Operators are, erm, slightly complicated. The essential idea is that:
    enclosed in the common set, including the ASCII 'o' as a stand-in for
    U+25cb '○'.
 ::
-
   regex op-okay-sym = + - * / ^ % > < ~
   regex op-nice-sym = ! & '|' '=' ? @ '.'
   regex op-great-sym = : # $ ;
@@ -302,18 +332,88 @@ be annotated with units of measure too::
   let zero = 0.0 : [..]
   -- zero : {Floating a ->} a ['u]
 
-*************
-Miscellaneous
-*************
+*******
+Grammar
+*******
 
-Holes
-=====
+***********
+Indentation
+***********
 
-There are two kinds of holes:
+The default light syntax is indentation-sensitive, similar to Python, Haskell or F#.
+This may be mixed with heavy, C-like syntax (possibly with some restrictions).
+[TODO: What restrictions?]
 
-#. Informative holes - These allow the user to tell the compiler "hey, I don't
-   know what should be here, can you give me some suggestions?". Informative
-   holes can be named/numbered.
-#. Abbreviation holes - These allow the user to tell the compiler "hey, I know
-   there is something here, infer it, and keep your mouth shut." They can serve
-   as documentation while refactoring without making type signatures very large.
+Examples
+========
+
+``in`` keyword::
+
+  Light syntax      Heavy syntax
+
+  let foo =         let foo =
+    let bar = 10      let bar = 10 in
+    bar + bar         bar + bar
+
+``do`` blocks::
+
+  Light syntax                         Heavy syntax
+
+  let printHi = do                     let printHi = do {
+    name <- getString                    name <- getString;
+    let msg = "Hi "                      let msg = "Hi " in
+    putStrLn (msg ++ name ++ "!")        putStrLn (msg ++ name ++ "!");
+                                       }
+
+module declarations::
+
+  Light syntax                 Heavy syntax
+
+  mod Foo where                mod Foo {
+    type Bar = Int               type Bar = Int;
+    let double : Bar -> Bar      let double : Bar -> Bar;
+    let double = (* 2)           let double = (* 2);
+                               }
+
+pattern matching::
+
+  Light syntax      Heavy syntax
+
+  match foo with    match foo {
+    1 | 2 -> x        1 | 2 -> x;
+    _ -> y            _ -> y;
+                    }
+
+Faux tokens
+===========
+
+::
+  token $in
+  token $begin  -- corresponds to {
+  token $end    -- corresponds to }
+  token $sep    -- corresponds to ;
+
+Grammar rules with faux tokens
+==============================
+
+****************
+Implicit modules
+****************
+
+We allow for local defaulting for implicits::
+
+  -- (>) : {Ord a ->} a -> a -> a
+
+  let speedCmps = do
+    let default BytecodeSpeedOrd : Ord Bytecode
+    assert (fastCode > slowCode)
+
+  let sizeCmp = do
+    let default BytecodeSizeOrd : Ord Bytecode
+    assert (fastCode < slowCode)
+
+******
+Optics
+******
+
+Some amount of built-in support for optics?
