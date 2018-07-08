@@ -1,0 +1,35 @@
+use std::vec::Vec;
+// use ramp::int::Int;
+use miuki::lexer::*;
+use miuki::lexer::Precedence as P;
+use miuki::lexer::Fixity as F;
+use miuki::ast::*;
+use miuki::span::{ByteOffset};
+
+grammar;
+
+extern {
+    type Location = ByteOffset;
+    type Error = LexError;
+
+    enum Token {
+        "ident" => Token::Identifier(_),
+        "op-0-l" => Token::InfixOp(P::P0, F::InfixL),
+        "op-0-n" => Token::InfixOp(P::P0, F::InfixN),
+        "op-0-r" => Token::InfixOp(P::P0, F::InfixR),
+        "type" => Token::Kw(Kw::Type),
+        "|" => Token::SymKw(SymKw::Pipe),
+        "=" => Token::SymKw(SymKw::Equals),
+        "ws" => Token::Whitespace,
+    }
+}
+
+pub TypeDefn: TypeDef = {
+    "type" "ident" "=" ("ident")+ ("|" "ident"+)*
+    => TypeDef {
+        tyname: Ident::from("".to_string()),
+        arms: Vec::new(),
+    }
+}
+
+pub Program = TypeDefn*;

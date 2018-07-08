@@ -6,7 +6,7 @@ build = "build.rs"
 
 [lib]
 name = "miuki"
-path = "src/miuki.rs"
+path = "src/lib.rs"
 
 [[bin]]
 name = "miu"
@@ -22,3 +22,5 @@ path = 'lalrpop/lalrpop-util'
 typed-arena = "^1.4.1"
 ramp = "^0.4.1"
 regex = "*"
+istring = "^0.1.12"
+plex = "^0.2.2"

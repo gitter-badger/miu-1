@@ -133,10 +133,10 @@ literals::
     foreign volatile
     atomic
 
-  token contextual-ident-keyword = family map default
+  token contextual-ident-keyword = alias family map default
 
   token reserved-ident-keyword =
-    atomic functor comptime tailcall
+    functor comptime tailcall
 
   token backslash-op = "\\"
 
@@ -215,10 +215,10 @@ String literals can be specified as follows::
 
   regex string-char = string-simple-char | string-escape-char | unicode-char | newline
 
-  regex string-elem = string-char | '\' newline whitespace* string-elem
+  regex string-elem = string-char | '\' whitespace* newline whitespace*
 
   token char = ' char-char '
-  token string = " string-elem "
+  token string = " string-elem* "
 
   regex raw-string-char = (any char but ")
   regex raw-string-elem = " raw-string-char* " | '|' raw-string-content '|'
@@ -235,9 +235,9 @@ Numbers can be written in several ways::
   regex octdigit = [0-7]
   regex bindigit = [0-1]
 
-  regex dec-nat  = 0 | [1-9] (_ | decdigit)*
+  regex dec-nat = 0 (_ | 0)* | [1-9] (_ | decdigit)*
   regex hex-nat = 0 x (_ | hexdigit)+
-  regex oct-nat = 0 x (_ | octdigit)+
+  regex oct-nat = 0 o (_ | octdigit)+
   regex bin-nat = 0 b (_ | bindigit)+
   regex dec-exp = (e | E) (+ | -)? (_ | decdigit)+
   regex bin-exp = (p | P) (+ | -)? (_ | decdigit)+
@@ -335,6 +335,11 @@ be annotated with units of measure too::
 *******
 Grammar
 *******
+
+[TODO: Think about if statements]
+
+::
+   bool-like = expr | bind-pattern
 
 ***********
 Indentation
