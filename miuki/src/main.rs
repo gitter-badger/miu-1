@@ -1,19 +1,15 @@
 #![feature(rust_2018_preview)]
-#![feature(test)]
 
-extern crate test;
 extern crate miuki;
 extern crate ramp;
-#[macro_use]
-extern crate lalrpop_util;
 
-use test::Bencher;
-use std::path::{Path};
 use miuki::test;
 use miuki::lexer;
+use miuki::parser;
 
-lalrpop_mod!(pub calc); // synthesized by LALRPOP
-lalrpop_mod!(pub parser);
+use std::path::{Path};
+
+// lalrpop_mod!(pub calc); // synthesized by LALRPOP
 
 /*
 #[test]
@@ -50,7 +46,7 @@ fn main() {
     );
     println!("{:?}", p.parse(l));
 
-    let s = std::fs::read_to_string(Path::new("test/gen/LateResolve.miu"))
+    let s = std::fs::read_to_string(Path::new("test/gen/10k.miu"))
         .unwrap();
     let l2 = lexer::Lexer::new(&s);
     let p2 = parser::ProgramParser::new();
@@ -62,16 +58,6 @@ fn main() {
             println!("{:?}", e);
         }
     }
-}
-
-#[bench]
-fn btest(b: &mut Bencher) {
-    let s = std::fs::read_to_string(Path::new("test/gen/LateResolve.miu")).unwrap();
-    b.iter(|| {
-        let l = lexer::Lexer::new(&s);
-        let p = parser::ProgramParser::new();
-        p.parse(l);
-    });
 }
 
 /*

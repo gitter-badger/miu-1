@@ -1,10 +1,11 @@
+use lexer::*;
+use lexer::Precedence as P;
+use lexer::Fixity as F;
+use ast::*;
+use span::{ByteOffset};
+
 use std::vec::Vec;
 // use ramp::int::Int;
-use miuki::lexer::*;
-use miuki::lexer::Precedence as P;
-use miuki::lexer::Fixity as F;
-use miuki::ast::*;
-use miuki::span::{ByteOffset};
 
 grammar;
 

@@ -12,11 +12,10 @@ path = "src/lib.rs"
 name = "miu"
 path = "src/main.rs"
 
-[build-dependencies.lalrpop]
-path = 'lalrpop/lalrpop'
-
-[dependencies.lalrpop-util]
-path = 'lalrpop/lalrpop-util'
+[[bench]]
+name = "10k_parse"
+path = "bench/10k_parse.rs"
+harness = false
 
 [dependencies]
 typed-arena = "^1.4.1"
@@ -24,3 +23,11 @@ ramp = "^0.4.1"
 regex = "*"
 istring = "^0.1.12"
 plex = "^0.2.2"
+lalrpop-util = {git = "https://github.com/nikomatsakis/lalrpop", branch = "master"}
+
+[build-dependencies]
+lalrpop = {git = "https://github.com/nikomatsakis/lalrpop", branch = "master"}
+
+[dev-dependencies]
+plex = "^0.2.2"
+criterion = "^0.2.3"

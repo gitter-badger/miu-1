@@ -13,5 +13,5 @@ out = ''.join(code)
 if not os.path.exists("gen"):
     os.makedirs("gen")
 
-with open(path.join("gen", "LateResolve.miu"), 'w') as f:
+with open(path.join("gen", "10k.miu"), 'w') as f:
     f.write(out)
