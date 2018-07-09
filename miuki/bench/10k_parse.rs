@@ -2,22 +2,29 @@
 extern crate criterion;
 extern crate miuki;
 
-use std::path::Path;
-use miuki::lexer as lexer;
-use miuki::parser as parser;
+use miuki::lexer;
+use miuki::parser;
 
+use criterion::Benchmark;
 use criterion::Criterion;
+use criterion::Throughput;
 
-fn parse_10k(c: &mut Criterion) {
-    let s = std::fs::read_to_string(Path::new("test/gen/10k.miu"))
-        .unwrap();
-    c.bench_function("parse_10k", move |b| {
-        b.iter(|| {
-            let l = lexer::Lexer::new(&s);
-            let p = parser::ProgramParser::new();
-            assert!(p.parse(l).is_ok());
-        })
-    });
+use std::path::Path;
+
+fn parse_10k(_: &mut Criterion) {
+    let s = std::fs::read_to_string(Path::new("test/gen/10k.miu")).unwrap();
+    Criterion::default().sample_size(250).bench(
+        "throughput",
+        Benchmark::new("parse_10k", move |b| {
+            b.iter(|| {
+                let l = lexer::Lexer::new(&s);
+                let p = parser::ProgramParser::new();
+                assert!(p.parse(l).is_ok());
+            })
+        }).throughput(
+            Throughput::Elements(10000),
+        ),
+    );
 }
 
 criterion_group!(bench, parse_10k);
