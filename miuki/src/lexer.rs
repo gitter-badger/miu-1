@@ -228,19 +228,13 @@ lexer! {
 
 pub struct Lexer<'a> {
     rem: &'a str,
-    idx: u32,
+    idx: ByteOffset,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(s: &'a str) -> Lexer<'a> {
         Lexer { rem: s, idx: 0 }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct PlexSpan {
-    pub lo: u32,
-    pub hi: u32,
 }
 
 impl<'a> Lexer<'a> {
@@ -267,7 +261,7 @@ impl<'a> Iterator for Lexer<'a> {
                         let old_idx = self.process(new_rem);
                         Some((old_idx, tok, self.idx))
                     }
-                    None => None
+                    None => None,
                 }
             }
             Some((tok, new_rem)) => {

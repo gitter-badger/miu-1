@@ -46,7 +46,7 @@ fn main() {
     );
     println!("{:?}", p.parse(l));
 
-    let s = std::fs::read_to_string(Path::new("test/gen/10k.miu"))
+    let s = std::fs::read_to_string(Path::new("test/generated/10k.miu"))
         .unwrap();
     let l2 = lexer::Lexer::new(&s);
     let p2 = parser::ProgramParser::new();
