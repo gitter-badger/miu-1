@@ -6,6 +6,8 @@ import Development.Shake
 import Development.Shake.FilePath (joinPath, splitDirectories, (</>))
 
 import Control.Exception (assert)
+import Data.List (intercalate)
+import System.Console.GetOpt (ArgDescr (ReqArg), OptDescr (Option))
 import System.Directory (getCurrentDirectory)
 
 main :: IO ()
@@ -36,49 +38,58 @@ relativePath = \case
   Miu -> ""
   Miuki -> "miuki"
 
-data Project = Rooted { root :: FilePath, full :: FilePath, proj :: ProjectName }
+data Project = Rooted {root :: FilePath, full :: FilePath, proj :: ProjectName}
 
 changeProject :: Project -> ProjectName -> Project
-changeProject Rooted{root} p = Rooted{root, full = root </> relativePath p, proj = p}
+changeProject Rooted{root} p
+  = Rooted{root, full = root </> relativePath p, proj = p}
 
 miuMain :: Project -> IO ()
 miuMain p = do
   assert (proj p == Miu) (pure ())
   miukiMain (p `changeProject` Miuki)
 
--- TODO: Add forwarding of arguments to cargo
--- https://github.com/ndmitchell/shake/issues/607
+fwdOpts :: OptDescr (Either a String)
+fwdOpts = Option "f" ["fwd"] (ReqArg (Right . id) "FLAGS")
+  "Forward arguments to the underlying command."
+
 miukiMain :: Project -> IO ()
 miukiMain Rooted{root, full, proj} = do
   assert (proj == Miuki) (pure ())
-  shakeArgs shakeOptions{ shakeFiles = full </> ".sanna" } $ do
-    action doSanityChecks
+  shakeArgsWith shakeOptions{shakeFiles = full </> ".sanna"} [fwdOpts]
+    $ \flags targets -> return . Just $ do
+      action doSanityChecks
+      let benchPath = full </> "bench"
+      let sampleDir = benchPath </> "samples"
+      let fwdCmd a b = cmd a (b ++ ' ' : intercalate " " flags)
 
-    let benchPath = full </> "bench"
-    let sampleDir = benchPath </> "samples"
+      if null targets then action (fwdCmd [Cwd full] "cargo") else want targets
 
-    phony "generateMiuFiles" $
-      cmd [Cwd sampleDir] "python3 generate.py"
+      phony "__generateMiuFiles" $
+        fwdCmd [Cwd sampleDir] "python3 generate.py"
 
-    sampleDir </> "*.miu" %> \_ ->
-      need ["generateMiuFiles"]
+      sampleDir </> "*.miu" %> \_ ->
+        need ["__generateMiuFiles"]
 
-    sampleDir </> "generate.py" %> \_ ->
-      need ["generateMiuFiles"]
+      sampleDir </> "generate.py" %> \_ ->
+        need ["__generateMiuFiles"]
 
-    phony "clean" $
-      cmd [Cwd full] "cargo clean"
+      phony "clean" $
+        fwdCmd [Cwd full] "cargo clean"
 
-    phony "refresh" $
-      cmd [Cwd (root </> "sanna")] "stack install"
+      phony "refresh" $
+        fwdCmd [Cwd (root </> "sanna")] "stack install"
 
-    phony "build" $
-      cmd [Cwd full] "cargo build"
+      phony "build" $
+        fwdCmd [Cwd full] "cargo build"
 
-    phony "bench" $ do
-      -- if either thing changes, their rules should fire
-      need [sampleDir </> "generate.py", sampleDir </> "10k.miu"]
-      cmd [Cwd full] "cargo bench"
+      phony "bench" $ do
+        -- if either thing changes, their rules should fire
+        need [sampleDir </> "generate.py", sampleDir </> "10k.miu"]
+        fwdCmd [Cwd full] "cargo bench"
+
+      phony "test" $
+        fwdCmd [Cwd full] "cargo test"
 
 doSanityChecks :: Action ()
 doSanityChecks = getEnv "RUSTUP_TOOLCHAIN" >>= \case

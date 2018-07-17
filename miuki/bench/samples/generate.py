@@ -1,5 +1,4 @@
 import os
-# big dummy comment
 import os.path as path
 import stat
 
