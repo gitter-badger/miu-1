@@ -4,3 +4,4 @@ miuki/bench/samples/*.miu
 sanna/*.cabal
 **/.sanna/
 **/.stack-work/
+*.pdf

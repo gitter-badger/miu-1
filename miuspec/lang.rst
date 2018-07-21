@@ -1,24 +1,58 @@
 ##########################
-Miu language informal spec
+Miu Language Informal Spec
 ##########################
 
-Note: This document heavily borrows from the nicely written
-`F# language spec <https://fsharp.org/specs/language-spec/>`_.
+:author: Varun Gandhi <theindigamer15@gmail.com>
+
+.. contents::
+
+.. section-numbering::
+
 
 ************
 Introduction
 ************
 
+Note: This document heavily borrows from the nicely written
+`F# language spec <https://fsharp.org/specs/language-spec/>`_.
+
 Suggested emojis: U+1f326 🌦 or U+1f36d 🍭 (once/if we have linear types!).
 
-Notational conventions
-======================
+Principles
+==========
+
+.. csv-table:: Symbols and mental associations
+   :header: Symbol, Association(s), Exception(s)
+   :widths: 3, 15, 8
+
+   ``.``, "composition (``.>``, ``<.:``), record/module access, bits (``.&.``)", ""
+   ``:``, "type (``:``), composition with 2 args (``:.>``)", "special operators (``:=``, ``:-``)"
+   ``..``, "Too lazy to write it out
+            import (``(..)``, ``(.. - x)``),
+            wildcards (``Just ..``), ignored hole (``PartialSignatures``),
+            enumeration (``1 .. 5``, ``1 ..= 5``)", ""
+   ``|``, "No unifying theme
+            or (``|``, ``||``),
+            application (``|>``, ``>|>``),
+            such that (comprehension/refinement),
+            parallel (comprehension/library ops)", ""
+   ``_``, "", ""
+   ``&``, "", ""
+   ``!``, "", ""
+   ``*``, "", ""
+   ``@``, "", ""
+   ``^``, "", ""
+   ``->``, "", ""
+   ``<-``, "", ""
 
 ****************
 Lexical analysis
 ****************
 
 Miu files must be valid UTF-8.
+
+Notation
+========
 
 Whitespace
 ==========
@@ -64,6 +98,7 @@ Conditional Compilation
 =======================
 
 ::
+
   #ifdef HAVE_TIME
   [TODO: This section.]
   #endif
@@ -82,7 +117,13 @@ Legal identifiers have the following specification::
   regex combining-char = '\Mn' | '\Mc'
   regex formatting-char = '\Cf'
   regex ident-start-char = letter-char
-  regex ident-mid-char = letter-char | digit-char | connecting-char | combining-char | formatting-char | ' | _
+  regex ident-mid-char =
+    | letter-char
+    | digit-char
+    | connecting-char
+    | combining-char
+    | formatting-char
+    | ' | _
   regex ident-end-char = #
   token ident = ident-start-char ident-mid-char* ident-end-char?
   token open-variant-ident = '^' ('\Lu' | '\Lt' | '\Lo') ident-mid-char* ident-end-char?
@@ -107,6 +148,7 @@ Holes are supported to allow for a better interactive experience::
   token pattern-hole = __ hole-name-char*
   token or-pattern-hole = __|
   token abbrev-hole = ".."
+  # NOTE: abbrev-hole is not lexed separately, they are subsumed under "..".
 
 Examples::
 
@@ -157,22 +199,24 @@ Operators
 
 Operators are, erm, slightly complicated. The essential idea is that:
 
-#. A small number of operators are allowed as single letter operators.
+#. A small set of operators are allowed as single letter operators.
 #. The set is expanded to a "common set" (which is used in most places)
    for operators with 2 symbols.
 #. Operators beginning with a : are considered constructors except when
    immediately followed by '-', '=' or '.'.
-#. Operators with 3 symbols additionally allow the largest set of characters
-   enclosed in the common set, including the ASCII 'o' as a stand-in for
-   U+25cb '○'.
-::
+#. Operators with 3 symbols additionally allow a large set of characters
+   to be enclosed between symbols from the common set,
+   including the ASCII 'o' as a stand-in for U+25cb '○'.
+
+The rules are summarized below::
+
   regex op-okay-sym = + - * / ^ % > < ~
   regex op-nice-sym = ! & '|' '=' ? @ '.'
   regex op-great-sym = : # $ ;
   regex op-common-sym = op-okay-sym | op-nice-sym
   regex op-any-sym = op-common-sym | op-great-sym
 
-  token unary-op = &mut | & | @
+  token unary-op = &mut | & | * | @
   token maybe-unary-op = -
 
   regex short-binary-op = op-okay-sym
@@ -195,25 +239,38 @@ Modules
 Module names are like constructors::
 
   regex pkg-name-start-char = letter-char | digit-char
-  regex pkg-name-end-char = letter-char | digit-char | connecting-char | combining-char | formatting-char | - | _
+  regex pkg-name-end-char =
+    | letter-char
+    | digit-char
+    | connecting-char
+    | combining-char
+    | formatting-char
+    | - | _
   regex pkg-name = package-name-start-char package-name-end-char*
   token mod-import-name = pkg-name : mod-name ('.' mod-name)*
 
 Strings and characters
 ======================
 
+[TODO: Look at Unicode's own suggested syntax.]
+
 String literals can be specified as follows::
 
   regex char-escape-char = '\' [\'ntbrafv]
-  regex char-simple-char = (any char except '\\' '\'' '\n' '\t' '\b' '\r' '\a' '\f' '\v')
+  regex char-simple-char =
+    (any char except '\\' '\'' '\n' '\t' '\b' '\r' '\a' '\f' '\v')
   regex unicode-char = '\' 'u' hexdigit{1-6}
 
   regex char-char = char-simple-char | char-escape-char | unicode-char
 
   regex string-escape-char = '\' [\"ntbrafv]
-  regex string-simple-char = (any char except '\\' '"' '\n' '\t' '\b' '\r' '\a' '\f' '\v')
-
-  regex string-char = string-simple-char | string-escape-char | unicode-char | newline
+  regex string-simple-char
+    = (any char except '\\' '"' '\n' '\t' '\b' '\r' '\a' '\f' '\v')
+  regex string-char =
+    | string-simple-char
+    | string-escape-char
+    | unicode-char
+    | newline
 
   regex string-elem = string-char | '\' whitespace* newline whitespace*
 
@@ -260,9 +317,14 @@ Useful for source code generation to trace back errors.
 Hidden tokens
 =============
 
-**********************
-Basic grammar elements
-**********************
+*******
+Grammar
+*******
+
+[TODO: Think about if statements]
+
+::
+   bool-like = expr | bind-pattern
 
 *************
 Scoping rules
@@ -279,9 +341,8 @@ Definition expressions
 Type definitions and signatures
 *******************************
 
-****************
 Units of Measure
-****************
+================
 
 We support units of measure like F#. They act like normal types except:
 
@@ -331,15 +392,6 @@ be annotated with units of measure too::
   let ballSpeed = 10 : Int [m/s]
   let zero = 0.0 : [..]
   -- zero : {Floating a ->} a ['u]
-
-*******
-Grammar
-*******
-
-[TODO: Think about if statements]
-
-::
-   bool-like = expr | bind-pattern
 
 ***********
 Indentation
@@ -392,7 +444,8 @@ pattern matching::
 Faux tokens
 ===========
 
-::
+We use some fake tokens to avoid handling indentation directly in the parser::
+
   token $in
   token $begin  -- corresponds to {
   token $end    -- corresponds to }
@@ -417,8 +470,8 @@ We allow for local defaulting for implicits::
     let default BytecodeSizeOrd : Ord Bytecode
     assert (fastCode < slowCode)
 
-******
-Optics
-******
+*******
+Prelude
+*******
 
-Some amount of built-in support for optics?
+Some amount of built-in support for (profunctor) optics?
