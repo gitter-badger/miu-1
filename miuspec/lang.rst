@@ -26,7 +26,7 @@ Principles
    :widths: 3, 15, 8
 
    ``.``, "composition (``.>``, ``<.:``), record/module access, bits (``.&.``)", ""
-   ``:``, "type (``:``), composition with 2 args (``:.>``)", "special operators (``:=``, ``:-``)"
+   ``:``, "type (``:``), composition with 2 args (``:.>``), package access", "special operators (``:=``, ``:-``)"
    ``..``, "Too lazy to write it out
             import (``(..)``, ``(.. - x)``),
             wildcards (``Just ..``), ignored hole (``PartialSignatures``),
@@ -36,14 +36,15 @@ Principles
             application (``|>``, ``>|>``),
             such that (comprehension/refinement),
             parallel (comprehension/library ops)", ""
-   ``_``, "", ""
-   ``&``, "", ""
-   ``!``, "", ""
-   ``*``, "", ""
-   ``@``, "", ""
+   ``*``, "applicative (``>*>``), deref", ""
+   ``;``, "monadic (``>;>``)", ""
+   ``_``, "Holes", ""
+   ``&``, "and (``&``, ``&&``), borrow/address", ""
+   ``!``, "index (``!!``, ``!?``)", ""
+   ``->``, "function arrow, then (if/match)", ""
+   ``<-``, "pattern", ""
    ``^``, "", ""
-   ``->``, "", ""
-   ``<-``, "", ""
+   ``@``, "optics?", ""
 
 ****************
 Lexical analysis
@@ -247,7 +248,7 @@ Module names are like constructors::
     | formatting-char
     | - | _
   regex pkg-name = package-name-start-char package-name-end-char*
-  token mod-import-name = pkg-name : mod-name ('.' mod-name)*
+  token mod-import-name = (pkg-name :)? mod-name ('.' mod-name)*
 
 Strings and characters
 ======================
@@ -321,10 +322,21 @@ Hidden tokens
 Grammar
 *******
 
-[TODO: Think about if statements]
+At the core of ``match`` and ``if`` statements are ``bool-like`` patterns::
 
-::
-   bool-like = expr | bind-pattern
+  bool-like = expr | pattern
+
+``if`` expressions are multi-way by default::
+
+  if  a | b -> c
+      (Just x <- y) -> q x
+      else -> z
+
+``match`` expressions are very similar to ``if`` but have a "head"::
+
+  match x with
+    y & (Just z <- w) -> q z
+    ..  -> p
 
 *************
 Scoping rules
@@ -336,6 +348,26 @@ Expressions
 
 Definition expressions
 ======================
+
+*******
+Pragmas
+*******
+
+Impl
+====
+
+Rewrite
+-------
+
+The function implementation should be treated as a rewrite rule (with argument
+expressions directly substituted), instead of first evaluating the arguments
+and then calling the function. For example, boolean short-circuit operations
+can be implemented in a library using this technique::
+
+  --# Impl Rewrite
+  (&&) x y = match x with
+    | True -> y
+    | False -> False
 
 *******************************
 Type definitions and signatures
