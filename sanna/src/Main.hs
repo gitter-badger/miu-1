@@ -1,9 +1,11 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ViewPatterns #-}
 
 import Sanna.Prelude
 
 import Development.Shake
 import Development.Shake.FilePath (joinPath, splitDirectories, (</>))
+import Development.Shake.Command (IsCmdArgument, CmdArguments)
 
 import Control.Exception (assert)
 import Data.List (intercalate)
@@ -17,6 +19,7 @@ main = do
   case proj p of
     Miu   -> miuMain p
     Miuki -> miukiMain p
+    Miuspec -> miuspecMain p
 
 getProject :: FilePath -> Project
 getProject
@@ -24,19 +27,25 @@ getProject
   .> break (== "miu")
   .> \(joinPath -> pre, post) ->
        let root = pre </> "miu" in
-         case drop 1 post of
-           [] ->        Rooted { proj = Miu, root, full = root }
-           "miuki":_ -> Rooted { proj = Miuki, root, full = root </> "miuki" }
-           _ -> error "Neither miu nor miuki were found on the current path.\n\
-                      \Exiting. :("
+         case post of
+           [] -> error "Couldn't find the miu directory on the cwd path.\
+                       \Exiting :("
+           "miu":ps -> case ps of
+             [] -> Rooted { proj = Miu, root, full = root }
+             "miuki":_ -> Rooted { proj = Miuki, root, full = root </> "miuki" }
+             "miuspec":_ -> Rooted { proj = Miuspec, root, full = root </> "miuspec" }
+             _ -> error "Not sure which project you're trying to build.\n\
+                        \Maybe update the build system to handle it?"
+           _ -> error "Unreachable!"
 
-data ProjectName = Miu | Miuki
+data ProjectName = Miu | Miuki | Miuspec
   deriving Eq
 
 relativePath :: ProjectName -> FilePath
 relativePath = \case
   Miu -> ""
   Miuki -> "miuki"
+  Miuspec -> "miuspec"
 
 data Project = Rooted {root :: FilePath, full :: FilePath, proj :: ProjectName}
 
@@ -44,52 +53,86 @@ changeProject :: Project -> ProjectName -> Project
 changeProject Rooted{root} p
   = Rooted{root, full = root </> relativePath p, proj = p}
 
+fwdOpts :: OptDescr (Either a String)
+fwdOpts = Option "f" ["fwd"] (ReqArg (Right . id) "FLAGS")
+  "Forward arguments to the underlying command."
+
+type CmdRunner a b = (IsCmdArgument a, CmdArguments b) => a -> String -> b
+
+fwdCmd :: [String] -> CmdRunner a b
+fwdCmd flags a b = cmd a (b ++ ' ' : intercalate " " flags)
+
+refreshRule :: Project -> CmdRunner [CmdOption] (Action ()) -> Rules ()
+refreshRule Rooted{root} run =
+  phony "refresh" <|
+    run [Cwd (root </> "sanna")] "stack install"
+
 miuMain :: Project -> IO ()
 miuMain p = do
   assert (proj p == Miu) (pure ())
   miukiMain (p `changeProject` Miuki)
 
-fwdOpts :: OptDescr (Either a String)
-fwdOpts = Option "f" ["fwd"] (ReqArg (Right . id) "FLAGS")
-  "Forward arguments to the underlying command."
+fire :: FilePath -> a -> Action ()
+fire = const . need . (:[])
+
+miuspecMain :: Project -> IO ()
+miuspecMain p@Rooted{root, full, proj} = do
+  assert (proj == Miuspec) (pure ())
+  shakeArgsWith shakeOptions{shakeFiles = root </> ".sanna"} [fwdOpts]
+    <| \flags targets -> return . Just <| do
+      -- Don't forget the next line or Shake won't do anything!
+      want targets
+      let fwd_ = fwdCmd flags
+
+      phony "clean" <|
+        removeFilesAfter full ["lang.pdf"]
+
+      refreshRule p fwd_
+
+      phony "__generatePDF" <|
+        fwd_ [Cwd full] "rst2pdf lang.rst -o lang.pdf -s kerning"
+
+      full </> "lang.pdf" %> fire "__generatePDF"
+
+      full </> "lang.rst" %> fire "__generatePDF"
+
+      phony "build" <|
+        need [full </> "lang.rst", full </> "lang.pdf"]
 
 miukiMain :: Project -> IO ()
-miukiMain Rooted{root, full, proj} = do
+miukiMain p@Rooted{root, full, proj} = do
   assert (proj == Miuki) (pure ())
-  shakeArgsWith shakeOptions{shakeFiles = full </> ".sanna"} [fwdOpts]
-    $ \flags targets -> return . Just $ do
+  shakeArgsWith shakeOptions{shakeFiles = root </> ".sanna"} [fwdOpts]
+    <| \flags targets -> return . Just $ do
       action doSanityChecks
       let benchPath = full </> "bench"
       let sampleDir = benchPath </> "samples"
-      let fwdCmd a b = cmd a (b ++ ' ' : intercalate " " flags)
+      let fwd_ = fwdCmd flags
 
-      if null targets then action (fwdCmd [Cwd full] "cargo") else want targets
+      if null targets then action (fwd_ [Cwd full] "cargo") else want targets
 
-      phony "__generateMiuFiles" $
-        fwdCmd [Cwd sampleDir] "python3 generate.py"
+      phony "clean" <|
+        fwd_ [Cwd full] "cargo clean"
 
-      sampleDir </> "*.miu" %> \_ ->
-        need ["__generateMiuFiles"]
+      refreshRule p fwd_
 
-      sampleDir </> "generate.py" %> \_ ->
-        need ["__generateMiuFiles"]
+      phony "build" <|
+        fwd_ [Cwd full] "cargo build"
 
-      phony "clean" $
-        fwdCmd [Cwd full] "cargo clean"
+      phony "__generateMiuFiles" <|
+        fwd_ [Cwd sampleDir] "python3 generate.py"
 
-      phony "refresh" $
-        fwdCmd [Cwd (root </> "sanna")] "stack install"
+      sampleDir </> "*.miu" %> fire "__generateMiuFiles"
 
-      phony "build" $
-        fwdCmd [Cwd full] "cargo build"
+      sampleDir </> "generate.py" %> fire "__generateMiuFiles"
 
-      phony "bench" $ do
+      phony "bench" <| do
         -- if either thing changes, their rules should fire
         need [sampleDir </> "generate.py", sampleDir </> "10k.miu"]
-        fwdCmd [Cwd full] "cargo bench"
+        fwd_ [Cwd full] "cargo bench"
 
-      phony "test" $
-        fwdCmd [Cwd full] "cargo test"
+      phony "test" <|
+        fwd_ [Cwd full] "cargo test"
 
 doSanityChecks :: Action ()
 doSanityChecks = getEnv "RUSTUP_TOOLCHAIN" >>= \case
