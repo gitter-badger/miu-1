@@ -38,13 +38,14 @@ Principles
             parallel (comprehension/library ops)", ""
    ``*``, "applicative (``>*>``), deref", ""
    ``;``, "monadic (``>;>``)", ""
-   ``_``, "Holes", ""
+   ``_``, "Holes (``_1``, ``_a``)", ""
    ``&``, "and (``&``, ``&&``), borrow/address", ""
    ``!``, "index (``!!``, ``!?``)", ""
    ``->``, "function arrow, then (if/match)", ""
    ``<-``, "pattern", ""
-   ``^``, "", ""
+   ``#``, "primitive", ""
    ``@``, "optics?", ""
+   ``^``, "", ""
 
 ****************
 Lexical analysis
@@ -67,10 +68,6 @@ Whitespace consists of spaces, tabs and newlines::
 Comments
 ========
 
-#. Block comments are delimited by ``{-`` and ``-}``.
-#. Block doc comments are delimited ``{-|`` and ``-}``.
-#. Block pragmas are delimited by ``{-#`` and ``-}``.
-#. Block comments cannot be nested.
 #. Single line comments begin with ``--``.
 #. Single line doc comments begin with ``--|`` or ``--^``.
 #. Single line pragmas begin with ``--#``.
@@ -79,13 +76,18 @@ Naturally, single line comments extend to the end of the line.
 
 This can be summarized as::
 
+  token end-of-line-comment = "--"
+  token end-of-line-doc-comment = "--|" | "--^"
+  token end-of-line-pragma = "--#"
+
+Block comments are not planned (because they make parsing in parallel hard)
+but may be added in the future (perhaps with a sequential parser?). If they're
+added, the syntax would be similar to Haskell::
+
   token block-comment-start = "{-"
   token block-doc-comment-start = "{-|"
   token block-pragma-start = "{-#"
   token block-comment-end = "-}"
-  token end-of-line-comment = "--"
-  token end-of-line-doc-comment = "--|" | "--^"
-  token end-of-line-pragma = "--#"
 
 Shebang
 -------
@@ -97,6 +99,8 @@ For example, the following should work if the file is set as an executable::
 
 Conditional Compilation
 =======================
+
+[TODO: Have a look at pros and cons of Rust's behaviour.]
 
 ::
 
@@ -138,23 +142,23 @@ There are two kinds of holes:
    know what should be here, can you give me some suggestions?". Informative
    holes can be named/numbered.
 #. Abbreviation holes - These allow the user to tell the compiler "hey, I know
-   there is something here, infer it, and keep your mouth shut." They can serve
+   there is something here, I don't particularly care about it." They can serve
    as documentation while refactoring without making type signatures very large.
 
 Holes are supported to allow for a better interactive experience::
 
   regex ident-hole = _
   regex hole-name-char = letter-char | digit-char
-  token hole = _ hole-name-char*
-  token pattern-hole = __ hole-name-char*
-  token or-pattern-hole = __|
+  token hole = _ hole-name-char+
+  token pattern-hole = _ hole-name-char+
+  token or-pattern-hole = _|
   token abbrev-hole = ".."
-  # NOTE: abbrev-hole is not lexed separately, they are subsumed under "..".
+  -- NOTE: abbrev-hole is not lexed separately; the ".." symbol subsumes it.
 
 Examples::
 
   let foo = Just 10 : .. Int -- analagous to 'Just @Int 10' in Haskell
-  let bar : _  = f x  -- compiler will suggest the type to fill for _
+  let bar : _b = f x  -- compiler will suggest the type to fill for _b
   let baz : _1 = f2 y
   let qux : _1 = f3 z -- compiler will suggest an option with the constraint that
                       -- the two _1's match; the "rewrite action" will include a
@@ -179,19 +183,23 @@ literals::
   token contextual-ident-keyword = alias family map default
 
   token reserved-ident-keyword =
+    cotype
+    data codata
+    class instance
     functor comptime tailcall
 
   token backslash-op = "\\"
 
   token symbolic-keyword =
-    -> <- -o | \ . : .. ; = ? ??
+    | & \ . : .. ; = ..= ? ??
+    -> <- -o => <=
     ( ) $(
     [ ] $[ [> [< >] <] [| |]
     { } ${ {> {< >} <}
     -(ident)->
     ->} -o}
 
-  token contextual-symbolic-keyword = "==" "==>"
+  token contextual-symbolic-keyword = "=="
 
   token reserved-symbolic-keyword = `
 

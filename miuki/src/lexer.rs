@@ -1,5 +1,5 @@
 use ramp::Int;
-use istring::IString;
+use mstring::MString;
 use span::{ByteOffset, Span, TokSpan};
 use plex::lexer;
 
@@ -107,11 +107,11 @@ pub enum Token {
     // TODO: Fix the prefix stuff.
     PrefixOp,
     InfixOp(Precedence, Fixity),
-    FatArrow(IString),
+    FatArrow(MString),
 
     IntLit(Int),
     CharLit(char),
-    StringLit(IString),
+    StringLit(MString),
 
     Quoted(Quoter),
 
@@ -149,7 +149,7 @@ pub enum Precedence {
 }
 
 #[derive(Debug)]
-pub struct Quoter(IString);
+pub struct Quoter(MString);
 
 #[derive(Debug, Copy, Clone)]
 pub enum DocAttach {
@@ -166,7 +166,7 @@ pub enum CommentStyle {
 pub struct MiuFile {
     text: String,
     // newlines: Vec<ByteOffset>,
-    pub op_info: Vec<(IString, Precedence, Fixity)>,
+    pub op_info: Vec<(MString, Precedence, Fixity)>,
     pub shebang: Option<TokSpan>,
 }
 

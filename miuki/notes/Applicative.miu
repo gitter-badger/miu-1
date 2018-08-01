@@ -1,0 +1,60 @@
+import Class.Functor (..)
+
+module Class.Applicative where
+
+implicit type Pointed f where
+  --| Lift a value.
+  pure : a -> f a
+
+implicit type Apply f where
+  has: Functor f
+
+  {-| Right to left sequential application.
+
+  :opname:`splat`
+  -}
+  infixl 4 <*<
+  (<*<)  : f (a -> b) -> f a -> f b
+  liftA2 : (a -> b -> c) -> f a -> f b
+
+deriving methods {(<*<), liftA2} from Apply
+
+implicit ApplyFromSplat : (M : Apply f except liftA2) -> Apply f where
+  has: M
+  liftA2 g = M.(g <|< x <*< y)
+
+derivation ApplyFromLiftA2 (M: Apply f (.. - liftA2)) where
+  has M
+  (<*<) = liftA2 id
+
+module type Applicative f where
+  has: Pointed f, Apply f
+
+implicit ApplicativeMaybe = MonadMaybe : Applicative Maybe
+
+implicit Applicative where
+  type F :: * -> *
+
+  (<*<) : F (a -> b) -> F a -> F b
+
+  {-| Lift a binary function to actions. -}
+  liftA2 : (a -> b -> c) -> F a -> F b -> F c
+  liftA2 f x y = f <|< x <*< y
+
+{-| Left to right sequential application.
+
+:opname:`splat`
+-}
+infixr 4 >*>
+(>*>) : {Applicative f} -> f a -> f (a -> b) -> f b
+(>*>) = flip (<*<)
+
+{-| Sequence actions from left to right, discarding the left argument. -}
+(-*>) : {Apply f} -> f a -> f b -> f b
+(-*>) = liftA2 (flip const)
+
+(-*○) : -○
+
+{-| Sequence actions from left to right, discarding the right argument. -}
+(>*-) : {Apply f} -> f a -> f b -> f a
+(>*-) = liftA2 const

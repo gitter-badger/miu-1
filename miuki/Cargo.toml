@@ -22,13 +22,11 @@ harness = false
 typed-arena = "^1.4.1"
 ramp = "^0.4.1"
 regex = "*"
-istring = "^0.1.12"
-plex = "^0.2.2"
+plex = {git = "https://github.com/goffrie/plex.git", branch = "master"}
 lalrpop-util = {git = "https://github.com/nikomatsakis/lalrpop", branch = "master"}
 
 [build-dependencies]
 lalrpop = {git = "https://github.com/nikomatsakis/lalrpop", branch = "master"}
 
 [dev-dependencies]
-plex = "^0.2.2"
 criterion = "^0.2.3"

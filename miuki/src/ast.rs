@@ -1,11 +1,12 @@
-use istring::IString;
+use mstring::MString;
 
 #[derive(Debug)]
-pub struct Ident(IString);
+pub struct Ident(MString);
 
-impl From<String> for Ident {
-    fn from(s: String) -> Ident {
-        Ident(IString::from(s))
+impl From<&str> for Ident {
+    #[inline(always)]
+    fn from(s: &str) -> Ident {
+        Ident(MString::from(s))
     }
 }
 
