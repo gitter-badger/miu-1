@@ -25,18 +25,27 @@ Principles
    :header: Symbol, Association(s), Exception(s)
    :widths: 3, 15, 8
 
-   ``.``, "composition (``.>``, ``<.:``), record/module access, bits (``.&.``)", ""
-   ``:``, "type (``:``), composition with 2 args (``:.>``), package access", "special operators (``:=``, ``:-``)"
-   ``..``, "Too lazy to write it out
-            import (``(..)``, ``(.. - x)``),
-            wildcards (``Just ..``), ignored hole (``PartialSignatures``),
-            enumeration (``1 .. 5``, ``1 ..= 5``)", ""
+   ``.``
+       , "composition (``.>``, ``<.:``), record/module access, bits (``.&.``)"
+       , ""
+   ``:``
+       , "type (``:``), composition with 2 args (``:.>``), package access"
+       , "special operators (``:=``, ``:-``)"
+   ``..``
+       , "Too lazy to write it out
+          import (``(..)``, ``(.. - x)``),
+          wildcards (``Just ..``), ignored hole (``PartialSignatures``),
+          enumeration (``1 .. 5``, ``1 ..= 5``)"
+       , ""
    ``|``, "No unifying theme
             or (``|``, ``||``),
             application (``|>``, ``>|>``),
             such that (comprehension/refinement),
-            parallel (comprehension/library ops)", ""
-   ``,``, "sequence", ""
+            parallel (comprehension/library ops)"
+       , ""
+   .. the double-quote is needed to prevent the comma from getting parsed as a
+      separator :(
+   "``,``", "sequence", ""
    ``*``, "applicative (``>*>``), deref", ""
    ``;``, "monadic (``>;>``)", ""
    ``_``, "Holes (``_1``, ``_a``)", ""
@@ -96,7 +105,7 @@ Shebang
 A shebang ``#!`` is allowed at the very beginning of the file following the Unix convention.
 For example, the following should work if the file is set as an executable::
 
-  #!/usr/bin/env miu-interpret
+  #!/usr/bin/env miu-run
 
 Conditional Compilation
 =======================
@@ -342,14 +351,14 @@ At the core of ``match`` and ``if`` statements are ``bool-like`` patterns::
       (Just x <- y) -> q x
       else -> z
 
-``match`` expressions are very similar to ``if`` but have a "head"::
+``match`` expressions are very similar to ``if`` but have a "head" too::
 
   match x with
     y & (Just z <- w) -> q z
     ..  -> p
 
 Operators are allowed as type variables. This can be handy when working with
-profunctors or similar higher-kinded type constructors. For example::
+profunctors and similar higher-kinded type constructors. For example::
 
   type Lens s t a b = forall (~>). Strong (~>) => (a ~> b) -> ((a, c) ~> (b, c))
 
@@ -373,6 +382,11 @@ Definition expressions
 Pragmas
 *******
 
+Rewrite
+=======
+
+General rewrite rules like Haskell.
+
 Impl
 ====
 
@@ -384,10 +398,12 @@ expressions directly substituted), instead of first evaluating the arguments
 and then calling the function. For example, boolean short-circuit operations
 can be implemented in a library using this technique::
 
-  --# Impl Rewrite
+  --# Impl [Rewrite]
   (&&) x y = match x with
-    | True -> y
-    | False -> False
+    True  -> y
+    False -> False
+
+[TODO: This is a special case of a more general rewrite rule.]
 
 *******************************
 Type definitions and signatures
@@ -422,12 +438,14 @@ Units are inferred generically only upon annotation::
   -- square1 : F64 ['u] -> F64 ['u] -> F64 ['u ^ 2]
 
   let square2 x = x * x
-  -- square2 : {Multiply a ->} a -> a -> a
+  -- square2 : Multiply a => a -> a -> a
 
-Unit brackets bind more tightly than application, like records in Haskell::
+Unit brackets bind more tightly than application::
 
   type XCoords = Array U32[m]
-  -- In prefix style, type XCoords = Array (`m` U32)
+  -- type XCoords = Array (U32 [m])
+
+[TODO: Think about ease of unit conversions.]
 
 Construction
 ============
@@ -475,7 +493,7 @@ Examples
 
   let printHi = do                     let printHi = do {
     let name <- getString                let name <- getString;
-    let msg = "Hi "                      let msg = "Hi " in
+        msg = "Hi "                      let msg = "Hi " in
     putStrLn (msg ++ name ++ "!")        putStrLn (msg ++ name ++ "!");
                                        }
 
@@ -494,8 +512,8 @@ pattern matching::
   Light syntax      Heavy syntax
 
   match foo with    match foo {
-    1 | 2 -> x        1 | 2 -> x;
-    _ -> y            _ -> y;
+    1 | 2 -> x        1 | 2 -> x,
+    _ -> y            _ -> y,
                     }
 
 records (tentative)::
@@ -520,7 +538,7 @@ We use some fake tokens to avoid handling indentation directly in the parser::
   token $in
   token $begin  -- corresponds to {
   token $end    -- corresponds to }
-  token $then   -- corresponds to ;
+  token $term   -- corresponds to ;
   token $next   -- corresponds to ,
 
 Grammar rules with faux tokens
@@ -545,5 +563,9 @@ We allow for local defaulting for implicits::
 *******
 Prelude
 *******
+
+[TODO: This chapter should only give a short high level overview of the design
+of the Prelude and what things are required from alternate preludes. It
+shouldn't have anything that would fit better in the library documentation.]
 
 Some amount of built-in support for (profunctor) optics?
