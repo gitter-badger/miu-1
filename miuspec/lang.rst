@@ -36,6 +36,7 @@ Principles
             application (``|>``, ``>|>``),
             such that (comprehension/refinement),
             parallel (comprehension/library ops)", ""
+   ``,``, "sequence", ""
    ``*``, "applicative (``>*>``), deref", ""
    ``;``, "monadic (``>;>``)", ""
    ``_``, "Holes (``_1``, ``_a``)", ""
@@ -176,7 +177,7 @@ literals::
     type mod implicit deriving
     forall exists
     do if then else match with
-    import except
+    import operator
     foreign volatile
     atomic
 
@@ -187,6 +188,7 @@ literals::
     data codata
     class instance
     functor comptime tailcall
+    throw catch except
 
   token backslash-op = "\\"
 
@@ -196,8 +198,8 @@ literals::
     ( ) $(
     [ ] $[ [> [< >] <] [| |]
     { } ${ {> {< >} <}
-    -(ident)->
-    ->} -o}
+    -[ident]->
+    =[ident]=>
 
   token contextual-symbolic-keyword = "=="
 
@@ -346,6 +348,16 @@ At the core of ``match`` and ``if`` statements are ``bool-like`` patterns::
     y & (Just z <- w) -> q z
     ..  -> p
 
+Operators are allowed as type variables. This can be handy when working with
+profunctors or similar higher-kinded type constructors. For example::
+
+  type Lens s t a b = forall (~>). Strong (~>) => (a ~> b) -> ((a, c) ~> (b, c))
+
+is arguably clearer than
+::
+
+  type Lens s t a b = forall p. Strong p => p a b -> p (a, c) (b, c)
+
 *************
 Scoping rules
 *************
@@ -412,6 +424,11 @@ Units are inferred generically only upon annotation::
   let square2 x = x * x
   -- square2 : {Multiply a ->} a -> a -> a
 
+Unit brackets bind more tightly than application, like records in Haskell::
+
+  type XCoords = Array U32[m]
+  -- In prefix style, type XCoords = Array (`m` U32)
+
 Construction
 ============
 
@@ -426,12 +443,12 @@ Construction
 Annotations
 ===========
 
-Just like arbitrary expressions can be annotated with type variables, they can
+Just like arbitrary expressions can be annotated with plain types, they can
 be annotated with units of measure too::
 
   let ballSpeed = 10 : Int [m/s]
   let zero = 0.0 : [..]
-  -- zero : {Floating a ->} a ['u]
+  -- zero : Floating a => a ['u]
 
 ***********
 Indentation
@@ -457,7 +474,7 @@ Examples
   Light syntax                         Heavy syntax
 
   let printHi = do                     let printHi = do {
-    name <- getString                    name <- getString;
+    let name <- getString                let name <- getString;
     let msg = "Hi "                      let msg = "Hi " in
     putStrLn (msg ++ name ++ "!")        putStrLn (msg ++ name ++ "!");
                                        }
@@ -481,6 +498,20 @@ pattern matching::
     _ -> y            _ -> y;
                     }
 
+records (tentative)::
+
+  Light syntax     Heavy syntax
+
+  type X = {       type X = {
+    a : U32          a : U32,
+    b : U32          b : U32,
+  }                }
+
+  let x : X = {    let x : X = {
+    a = 10           a = 10,
+    b = 20           b = 20,
+  }                }
+
 Faux tokens
 ===========
 
@@ -489,7 +520,8 @@ We use some fake tokens to avoid handling indentation directly in the parser::
   token $in
   token $begin  -- corresponds to {
   token $end    -- corresponds to }
-  token $sep    -- corresponds to ;
+  token $then   -- corresponds to ;
+  token $next   -- corresponds to ,
 
 Grammar rules with faux tokens
 ==============================
@@ -500,7 +532,7 @@ Implicit modules
 
 We allow for local defaulting for implicits::
 
-  -- (>) : {Ord a ->} a -> a -> a
+  -- (>) : Ord a => a -> a -> a
 
   let speedCmps = do
     let default BytecodeSpeedOrd : Ord Bytecode

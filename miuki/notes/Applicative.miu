@@ -1,60 +1,67 @@
 import Class.Functor (..)
 
+operator (<*<) =
+  { fixity = Left
+    precedence = 4
+    opname = "leftwards splat"
+  }
+
+operator (>*>) =
+  { fixity = Right
+    precedence = 4
+    opname = "rightwards splat"
+  }
+
+operator (-*>) =
+  { fixity = Right
+    precedence = 4
+    opname = "discard splat rightwards"
+  }
+
+operator (>*-) =
+  { fixity = Right
+    precedence = 4
+    opname = "rightwards splat discard"
+  }
+
 module Class.Applicative where
 
-implicit type Pointed f where
+mod type Pointed f where
   --| Lift a value.
   pure : a -> f a
 
-implicit type Apply f where
-  has: Functor f
+mod type Apply f where
+  -- Syntactic sugar for
+  -- has .. : Functor f
+  has Functor f
 
-  {-| Right to left sequential application.
-
-  :opname:`splat`
-  -}
-  infixl 4 <*<
-  (<*<)  : f (a -> b) -> f a -> f b
-  liftA2 : (a -> b -> c) -> f a -> f b
-
-deriving methods {(<*<), liftA2} from Apply
-
-implicit ApplyFromSplat : (M : Apply f except liftA2) -> Apply f where
-  has: M
-  liftA2 g = M.(g <|< x <*< y)
-
-derivation ApplyFromLiftA2 (M: Apply f (.. - liftA2)) where
-  has M
+  --| Right to left sequential application.
+  (<*<) : f (a -> b) -> f a -> f b
   (<*<) = liftA2 id
 
-module type Applicative f where
-  has: Pointed f, Apply f
+  -- Q: Does this introduce an additional
+  -- liftA2 : (M : Apply f) => ... in the outer scope?
+  liftA2 : (a -> b -> c) -> f a -> f b -> f c
+  liftA2 g x y = g <|< x <*< y
 
+implicit type Applicative f where
+  -- Sugar for
+  -- has .. : Pointed f
+  -- has .. : Apply f
+  has Pointed f, Apply f
+
+-- Transparent ascription, analogous to <: in OCaml 4.08 and above.
+-- See https://blog.janestreet.com/plans-for-ocaml-408/
 implicit ApplicativeMaybe = MonadMaybe : Applicative Maybe
 
-implicit Applicative where
-  type F :: * -> *
+-- | Left to right sequential application.
+(>*>) : M : Apply f => f a -> f (a -> b) -> f b
+(>*>) = flip M.(<*<)
 
-  (<*<) : F (a -> b) -> F a -> F b
+-- | Sequence actions from left to right, discarding the left argument.
+(-*>) : M : Apply f => f a -> f b -> f b
+(-*>) = M.liftA2 (flip const)
 
-  {-| Lift a binary function to actions. -}
-  liftA2 : (a -> b -> c) -> F a -> F b -> F c
-  liftA2 f x y = f <|< x <*< y
-
-{-| Left to right sequential application.
-
-:opname:`splat`
--}
-infixr 4 >*>
-(>*>) : {Applicative f} -> f a -> f (a -> b) -> f b
-(>*>) = flip (<*<)
-
-{-| Sequence actions from left to right, discarding the left argument. -}
-(-*>) : {Apply f} -> f a -> f b -> f b
-(-*>) = liftA2 (flip const)
-
-(-*○) : -○
-
-{-| Sequence actions from left to right, discarding the right argument. -}
-(>*-) : {Apply f} -> f a -> f b -> f a
-(>*-) = liftA2 const
+-- | Sequence actions from left to right, discarding the right argument.
+(>*-) : M : Apply f => f a -> f b -> f a
+(>*-) = M.liftA2 const
