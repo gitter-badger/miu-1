@@ -150,7 +150,7 @@ There are two kinds of holes:
 
 #. Informative holes - These allow the user to tell the compiler "hey, I don't
    know what should be here, can you give me some suggestions?". Informative
-   holes can be named/numbered.
+holes can be named/numbered.
 #. Abbreviation holes - These allow the user to tell the compiler "hey, I know
    there is something here, I don't particularly care about it." They can serve
    as documentation while refactoring without making type signatures very large.
@@ -292,15 +292,23 @@ String literals can be specified as follows::
     | unicode-char
     | newline
 
+  -- TODO: Consider if spaces should be allowed after '\' to avoid a
+  -- surprising lexer error when user accidentally leaves trailing whitespace.
   regex string-elem = string-char | '\' whitespace* newline whitespace*
 
   token char = ' char-char '
   token string = " string-elem* "
 
-  regex raw-string-char = (any char but ")
-  regex raw-string-elem = " raw-string-char* " | '|' raw-string-content '|'
+  -- The double-quote is interpreted as a single ", like C#/F#
+  regex raw-string-char = (any char but '"') | ""
+  regex raw-string-elem = " raw-string-char* "
 
   token raw-string = r raw-string-elem
+
+  token triple-quoted-string = """ (any char)* """
+
+A good discussion on use-cases for raw strings literals
+`Rust #9411 <https://github.com/rust-lang/rust/issues/9411#issuecomment-24894071>`_.
 
 Numbers
 =======
@@ -341,9 +349,15 @@ Hidden tokens
 Grammar
 *******
 
-At the core of ``match`` and ``if`` statements are ``bool-like`` patterns::
+Elements
+========
 
-  bool-like = expr | pattern
+[TODO: Think about pattern guard syntax. It shouldn't make parsing hard.]
+
+At the core of ``match`` and ``if`` statements are ``guards`` (borrowing
+terminology from Haskell)::
+
+  guard = expr | pattern
 
 ``if`` expressions are multi-way by default::
 
@@ -354,7 +368,7 @@ At the core of ``match`` and ``if`` statements are ``bool-like`` patterns::
 ``match`` expressions are very similar to ``if`` but have a "head" too::
 
   match x with
-    y & (Just z <- w) -> q z
+    y & let (Just z <- w) -> q z
     ..  -> p
 
 Operators are allowed as type variables. This can be handy when working with
@@ -366,6 +380,18 @@ is arguably clearer than
 ::
 
   type Lens s t a b = forall p. Strong p => p a b -> p (a, c) (b, c)
+
+Syntactic sugar
+===============
+
+``do`` blocks
+-------------
+
+View patterns
+-------------
+
+Comprehensions
+--------------
 
 *************
 Scoping rules
