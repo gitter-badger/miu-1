@@ -183,9 +183,10 @@ literals::
   token ident-keyword =
     rec
     let in as and where
-    type mod implicit deriving
+    type mod implicit
+    deriving pattern
     forall exists
-    do if then else match with
+    do if else match with
     import operator
     foreign volatile
     atomic
@@ -193,6 +194,7 @@ literals::
   token contextual-ident-keyword = alias family map default
 
   token reserved-ident-keyword =
+    then
     cotype
     data codata
     class instance
@@ -340,7 +342,7 @@ Line directives
 
 Useful for source code generation to trace back errors.
 
-[TODO: This is very low priority for now.]
+[TODO: What would a good approach be here?]
 
 Hidden tokens
 =============
@@ -411,10 +413,11 @@ Pragmas
 Rewrite
 =======
 
-General rewrite rules like Haskell.
+General rewrite rules like Haskell. It is the user's responsibility to make
+sure that the LHS and the RHS have the same semantics.
 
-Impl
-====
+Semantics
+=========
 
 Rewrite
 -------
@@ -424,12 +427,18 @@ expressions directly substituted), instead of first evaluating the arguments
 and then calling the function. For example, boolean short-circuit operations
 can be implemented in a library using this technique::
 
-  --# Impl [Rewrite]
+  --# Semantics {Rewrite}
   (&&) x y = match x with
     True  -> y
     False -> False
 
-[TODO: This is a special case of a more general rewrite rule.]
+There is a semantic distinction between ``Semantics {Rewrite}`` and
+
+- A rewrite rule means that the LHS and RHS have identical semantics, and prefer
+  replacing the LHS with the RHS.
+- ``Semantics {Rewrite}`` means that we *define* the LHS to have the semantics of
+  the RHS, which may not be the case if the pragma is not supplied, as in the
+  above example.
 
 *******************************
 Type definitions and signatures
@@ -471,7 +480,9 @@ Unit brackets bind more tightly than application::
   type XCoords = Array U32[m]
   -- type XCoords = Array (U32 [m])
 
-[TODO: Think about ease of unit conversions.]
+[TODO: Think about ease of unit conversions. Of course, there shouldn't be any
+implicit conversions/subtyping. Perhaps using functors + type generation (via
+metaprogramming) can alleviate the burden?]
 
 Construction
 ============
@@ -569,6 +580,42 @@ We use some fake tokens to avoid handling indentation directly in the parser::
 
 Grammar rules with faux tokens
 ==============================
+
+***********
+Type system
+***********
+
+[NOTE: This section serves as a scratch-pad for now.]
+
+These should be easy to use and on by default:
+
+* OCaml-based
+  + polymorphic variants
+  + row polymorphic records
+    - duplicate fields allowed? - see Koka, Purescript
+    - duplicate fields disallowed? - see Ur/Web
+  + modules and applicative ML functors
+
+!=!
+
+* Haskell-based
+  + GADTs
+  + higher-kinded types
+  + rank-2 types (possibly rank-N types)
+  + existential types
+  + type families (with limited partial application?)
+  + functional dependencies (desugar to type families?)
+  + coercion
+
+* some form of linear/affine types
+
+Needs more thought/time/research:
+
+* levity polymorphism instead of sub-kinding?
+* effect system - we will certainly need something like this?
+* generative functors
+* first class modules
+* refinement types/dependent types - ease of integration
 
 ****************
 Implicit modules
