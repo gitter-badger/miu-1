@@ -3,9 +3,9 @@ use mstring::MString;
 #[derive(Debug)]
 pub struct Ident(MString);
 
-impl From<&str> for Ident {
+impl<'a> From<&'a str> for Ident {
     #[inline(always)]
-    fn from(s: &str) -> Ident {
+    fn from(s: &'a str) -> Ident {
         Ident(MString::from(s))
     }
 }

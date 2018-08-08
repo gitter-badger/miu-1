@@ -28,7 +28,7 @@ extern {
 pub TypeDefn: TypeDef = {
     "type" "ident" "=" ("ident")+ ("|" "ident"+)*
     => TypeDef {
-        tyname: Ident::from("".to_string()),
+        tyname: Ident::from(""),
         arms: Vec::new(),
     }
 }
