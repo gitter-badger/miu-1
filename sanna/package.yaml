@@ -37,8 +37,8 @@ ghc-options:
 - -Wpartial-fields
 - -funbox-strict-fields
 
-# OverloadedStrings interacts badly with Shake so it isn't enabled by default.
 default-extensions:
+- OverloadedStrings # remove this if it interacts badly with Shake.
 - BangPatterns
 - LambdaCase
 - NamedFieldPuns

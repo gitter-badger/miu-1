@@ -3,10 +3,22 @@
    them in.
 -}
 module Sanna.Prelude
-  ( module Data.Maybe
-  , (|>), (>|>), (<|), (<|<), (.>), (<.)
+  ( module Control.Applicative
+  , module Control.Exception
+  , module Control.Monad
+  , module Data.Coerce
+  , module Data.Monoid
+  , module Data.Maybe
+  , module Data.String
+  , module Sanna.Prelude
   ) where
 
+import Control.Applicative
+import Control.Exception (assert)
+import Control.Monad
+import Data.String (IsString (..))
+import Data.Coerce
+import Data.Monoid
 import Data.Maybe
 
 infixl 0 |>
@@ -32,3 +44,6 @@ f .> g = g . f
 infixr 9 <.
 (<.) :: (b -> c) -> (a -> b) -> a -> c
 f <. g = f . g
+
+unreachable :: a
+unreachable = error "Unreachable!"
