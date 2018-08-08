@@ -175,25 +175,22 @@ miuMain p = do
 sannaMain :: Project -> IO ()
 sannaMain p@Rooted{root, proj} = do
   assert (proj == Sanna) (pure ())
-  miuShakeArgs root <| \flags targets -> return <. Just <|
-    void (stackBoilerplate p flags targets)
+  miuShakeArgs root <| pure <. Just <. void <.: stackBoilerplate p
 
 miudocMain :: Project -> IO ()
 miudocMain p@Rooted{root, proj} = do
   assert (proj == Miudoc) (pure ())
-  miuShakeArgs root <| \flags targets -> return <. Just <|
-    void (cargoBoilerplate p flags targets)
+  miuShakeArgs root <| pure <. Just <. void <.: cargoBoilerplate p
 
 sojiroMain :: Project -> IO ()
 sojiroMain p@Rooted{root, proj} = do
   assert (proj == Sojiro) (pure ())
-  miuShakeArgs root <| \flags targets -> return <. Just <|
-    void (cargoBoilerplate p flags targets)
+  miuShakeArgs root <| pure <. Just <. void <.: cargoBoilerplate p
 
 miukiMain :: Project -> IO ()
 miukiMain p@Rooted{root, full, proj} = do
   assert (proj == Miuki) (pure ())
-  miuShakeArgs root <| \flags targets -> return <. Just <| do
+  miuShakeArgs root <| \flags targets -> pure <. Just <| do
       fwd_ <- cargoBoilerplate p flags targets
 
       let benchPath = full </> "bench"
@@ -213,7 +210,7 @@ miukiMain p@Rooted{root, full, proj} = do
 miuspecMain :: Project -> IO ()
 miuspecMain p@Rooted{root, full, proj} = do
   assert (proj == Miuspec) (pure ())
-  miuShakeArgs root <| \flags targets -> return . Just <| do
+  miuShakeArgs root <| \flags targets -> pure . Just <| do
       -- Don't forget the next line or Shake won't do anything!
       want (coerce targets)
       let fwd_ = fwdCmd flags

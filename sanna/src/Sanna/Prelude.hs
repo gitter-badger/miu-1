@@ -45,5 +45,9 @@ infixr 9 <.
 (<.) :: (b -> c) -> (a -> b) -> a -> c
 f <. g = f . g
 
+infixr 8 <.:
+(<.:) :: (c -> d) -> (a -> b -> c) -> a -> b -> d
+(<.:) = (.) . (.)
+
 unreachable :: a
 unreachable = error "Unreachable!"
