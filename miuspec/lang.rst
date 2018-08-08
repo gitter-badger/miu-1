@@ -150,7 +150,7 @@ There are two kinds of holes:
 
 #. Informative holes - These allow the user to tell the compiler "hey, I don't
    know what should be here, can you give me some suggestions?". Informative
-holes can be named/numbered.
+   holes can be named/numbered.
 #. Abbreviation holes - These allow the user to tell the compiler "hey, I know
    there is something here, I don't particularly care about it." They can serve
    as documentation while refactoring without making type signatures very large.
@@ -204,7 +204,7 @@ literals::
   token backslash-op = "\\"
 
   token symbolic-keyword =
-    | & \ . : .. ; = ..= ? ??
+    | & \ . : .. ; = ..= ? ?? ! ~
     -> <- -o => <=
     ( ) $(
     [ ] $[ [> [< >] <] [| |]
@@ -232,7 +232,7 @@ Operators are, erm, slightly complicated. The essential idea is that:
 
 The rules are summarized below::
 
-  regex op-okay-sym = + - * / ^ % > < ~
+  regex op-okay-sym = + - * / ^ % > <
   regex op-nice-sym = ! & '|' '=' ? @ '.'
   regex op-great-sym = : # $ ;
   regex op-common-sym = op-okay-sym | op-nice-sym
@@ -440,6 +440,24 @@ There is a semantic distinction between ``Semantics {Rewrite}`` and
   the RHS, which may not be the case if the pragma is not supplied, as in the
   above example.
 
+Idea: If one uses this in a module signature, then all modules with the same
+signature (or derived from it [1]) should have the same semantics. E.g. one
+may declare::
+
+  mod type Alternative f where
+    has Applicative f
+    empty : f a
+    --# Semantics {Rewrite}
+    (<|>) : f a -> f a -> f a
+
+  implicit AlternativeMaybe : Alternative Maybe where
+    has ApplicativeMaybe
+    empty = Nothing
+    (<|>) Nothing r = r
+    (<|>) l       _ = l
+
+[1] "derived" should be defined properly..
+
 *******************************
 Type definitions and signatures
 *******************************
@@ -590,13 +608,14 @@ Type system
 These should be easy to use and on by default:
 
 * OCaml-based
+
   + polymorphic variants
   + row polymorphic records
+
     - duplicate fields allowed? - see Koka, Purescript
     - duplicate fields disallowed? - see Ur/Web
-  + modules and applicative ML functors
 
-!=!
+  + modules and applicative ML functors
 
 * Haskell-based
   + GADTs
