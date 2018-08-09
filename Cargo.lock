@@ -442,7 +442,11 @@ dependencies = [
 
 [[package]]
 name = "miudoc"
-version = "0.1.0"
+version = "0.0.0"
+dependencies = [
+ "regex 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "unicode-width 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "miuki"
