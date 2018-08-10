@@ -1,6 +1,13 @@
+/// All predicates return false for the `FAUX_CHAR`.
+
 pub fn contains<T: Eq + Copy>(a: &[T], x: T) -> bool {
     a.iter().find(|&&z| z == x).is_some()
 }
+
+/// Rust is opinionated enough to disallow surrogates inside char. E.g. the
+/// char literal '\u{d800}' is disallowed.
+/// So we use a private area character.
+pub const FAUX_CHAR: char = '\u{f8ff}';
 
 pub fn is_space(c: char) -> bool {
     c == ' '
@@ -40,7 +47,7 @@ pub fn is_top_vertex(c: char) -> bool {
     is_undirected_vertex(c) || c == '.'
 }
 
-pub fn is_bottom_vertex(c: char) -> bool {
+pub fn is_bot_vertex(c: char) -> bool {
     is_undirected_vertex(c) || c == '\''
 }
 

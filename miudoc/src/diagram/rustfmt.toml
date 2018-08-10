@@ -1,0 +1,3 @@
+# Allow more width here as the diagram code is quite hairy with all the
+# conditionals floating around.
+max_width = 100

@@ -77,3 +77,22 @@ Misc:
 
 * Bay area Rust talk: https://air.mozilla.org/rust-meetup-december-2013/
   (video can be downloaded!)
+
+Diagram gotchas
+===============
+
+The following Unicode scalars are not allowed:
+
+* Private use area: U+E004, U+F8FF
+
+For the rest, try and see if things break 😅.
+
+License
+=======
+
+``miudoc`` is primarily distributed under the BSD-3-Clause license. See `License`.
+
+The module ``diagram`` and its submodules are a derivative work of
+`Markdeep <https://casual-effects.com/markdeep/>`_ .
+
+The BSD-2-Clause license for ``Markdeep`` is included under ``licenses/``.
