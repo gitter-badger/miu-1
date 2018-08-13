@@ -1,9 +1,11 @@
 mod primitives;
+mod v2;
+mod path;
+mod decoration;
 mod grid;
 
 #[allow(dead_code)]
 use self::primitives::*;
-use self::grid::*;
 
 use regex::Regex;
 

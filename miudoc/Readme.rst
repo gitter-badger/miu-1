@@ -87,6 +87,8 @@ The following Unicode scalars are not allowed:
 
 For the rest, try and see if things break 😅.
 
+============================================================================
+
 License
 =======
 
