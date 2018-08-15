@@ -8,6 +8,7 @@ use unicode_width::UnicodeWidthChar;
 use unicode_width::UnicodeWidthStr;
 
 use std::cmp::max;
+use std::convert::TryInto;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MonoWidth(usize);
@@ -45,13 +46,11 @@ impl Grid {
 
     pub fn width(&self) -> V2Elt {
         let MonoWidth(w) = self.width;
-        assert!(w <= V2Elt::max as usize);
-        w as V2Elt
+        w.try_into().unwrap()
     }
 
     pub fn height(&self) -> V2Elt {
-        assert!(self.height <= V2Elt::max as usize);
-        self.height as V2Elt
+        self.height.try_into().unwrap()
     }
 
     /// Basically `at_precise` but only considering `Exact` values.
@@ -81,8 +80,8 @@ impl Grid {
     /// the returned char doesn't fully incorporate what will be displayed.
     pub fn at_precise<T: IsV2>(&self, v: T) -> (CharMatch, char) {
         let vv = v.to_v2();
-        let x = vv.x as usize;
-        let y = vv.y as usize;
+        let x = vv.x.round();
+        let y = vv.y.round();
         assert!(y < self.height);
         assert!(MonoWidth(x) < self.width);
         let mut tmp = 0;

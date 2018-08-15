@@ -33,12 +33,16 @@ impl Path {
 
     pub fn is_diagonal(&self) -> bool {
         let d = self.b - D2::from(self.a);
-        ((d.y + d.x) as f64) < EPSILON
+        // Don't use EPSILON because we have proper types, not just number.
+        // ((d.y + d.x) as f64) < EPSILON
+        d.x == d.y
     }
 
     pub fn is_backdiag(&self) -> bool {
         let d = self.b - D2::from(self.a);
-        (D2Elt::abs(d.y - d.x) as f64) < EPSILON
+        // Don't use EPSILON because we have proper types, not just number.
+        // (D2Elt::abs(d.y - d.x) as f64) < EPSILON
+        d.x == d.y
     }
 
     pub fn is_curved(&self) -> bool {

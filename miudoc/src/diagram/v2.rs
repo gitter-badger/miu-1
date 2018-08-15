@@ -1,7 +1,8 @@
 use std::convert::TryFrom;
+use std::num::TryFromIntError;
 use std::ops::Add;
+use std::ops::AddAssign;
 use std::ops::Sub;
-use std::u32::MAX;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Offset {
@@ -12,8 +13,13 @@ pub struct Offset {
 // Offset calculations
 
 impl Offset {
-    const DIVS: u8 = 20;
-    const MAX: Offset = Offset{o: 19};
+    pub const DIVS: u8 = 20;
+    pub const MAX: Offset = Offset { o: 19 };
+    pub const ZERO: Offset = Offset { o: 0 };
+
+    pub fn get(&self) -> u8 {
+        self.o
+    }
 }
 
 impl Add<Offset> for Offset {
@@ -22,7 +28,9 @@ impl Add<Offset> for Offset {
     fn add(self, x: Offset) -> V2Elt {
         let z = self.o as u16 + x.o as u16;
         let base = (z / (Self::DIVS as u16)) as u32;
-        let offset = Offset{o: (z % (Self::DIVS as u16)) as u8};
+        let offset = Offset {
+            o: (z % (Self::DIVS as u16)) as u8,
+        };
         V2Elt { base, offset }
     }
 }
@@ -33,7 +41,9 @@ impl Sub<Offset> for Offset {
     fn sub(self, x: Offset) -> D2Elt {
         let z = self.o as i32 - x.o as i32;
         let base = z.div_euc(Self::DIVS as i32) as i64;
-        let offset = Offset{o: z.mod_euc(Self::DIVS as i32) as u8};
+        let offset = Offset {
+            o: z.mod_euc(Self::DIVS as i32) as u8,
+        };
         D2Elt { base, offset }
     }
 }
@@ -55,7 +65,10 @@ pub trait IsV2Elt {
 
 impl IsV2Elt for V2EltBase {
     fn to_v2elt(self) -> V2Elt {
-        V2Elt {base: self, offset: Offset{o: 0}}
+        V2Elt {
+            base: self,
+            offset: Offset { o: 0 },
+        }
     }
 }
 
@@ -76,28 +89,41 @@ impl V2Elt {
     //     panic!()
     //     // V2Elt { base, offset }
     // }
-    const MAX: V2Elt = V2Elt {
-        base: V2EltBase::MAX,
+    pub const MAX: V2Elt = V2Elt {
+        base: u32::min_value(),
         offset: Offset::MAX,
     };
 
     pub fn force_sub(&self, v: V2Elt) -> V2Elt {
         let d = *self - v;
-        assert!(0 <= d.base && d.base <= V2EltBase::MAX as D2EltBase);
-        V2Elt { base: d.base as V2EltBase, offset: d.offset }
+        assert!(0 <= d.base && d.base <= <V2EltBase>::max_value() as D2EltBase);
+        V2Elt {
+            base: d.base as V2EltBase,
+            offset: d.offset,
+        }
+    }
+
+    pub fn round(&self) -> usize {
+        self.base as usize
+            + (if self.offset.get() < Offset::DIVS / 2 {
+                0
+            } else {
+                1
+            })
     }
 }
 
 impl Add<Offset> for V2Elt {
     type Output = V2Elt;
     fn add(self, x: Offset) -> V2Elt {
-        panic!()
+        unimplemented!()
     }
 }
 
 impl Add<V2Elt> for V2Elt {
     type Output = V2Elt;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn add(self, x: V2Elt) -> V2Elt {
         let V2Elt{base: extra, offset} = self.offset + x.offset;
         let base = self.base.checked_add(x.base).unwrap().checked_add(extra).unwrap();
@@ -109,22 +135,46 @@ impl Sub<V2Elt> for V2Elt {
     type Output = D2Elt;
 
     fn sub(self, x: V2Elt) -> D2Elt {
-        let D2Elt{base: extra, offset} = self.offset - x.offset;
+        let D2Elt {
+            base: extra,
+            offset,
+        } = self.offset - x.offset;
         let base = self.base as D2EltBase - x.base as D2EltBase + extra;
         D2Elt { base, offset }
     }
 }
 
+impl TryFrom<usize> for V2Elt {
+    type Error = TryFromIntError;
+
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn try_from(x: usize) -> Result<V2Elt, Self::Error> {
+        V2EltBase::try_from(x).map(|base| V2Elt { base, offset: Offset::ZERO })
+    }
+}
+
 type D2EltBase = i64;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct D2Elt {
     base: D2EltBase,
     offset: Offset,
 }
 
+impl AddAssign for D2Elt {
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn add_assign(&mut self, d: D2Elt) {
+        let v = self.offset + d.offset;
+        self.offset = v.offset;
+        self.base = self.base.checked_add(d.base).unwrap()
+            .checked_add(v.base as D2EltBase).unwrap();
+    }
+}
+
 impl Sub for D2Elt {
     type Output = D2Elt;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn sub(self, x: D2Elt) -> D2Elt {
         let D2Elt{base: extra, offset} = self.offset - x.offset;
         let base = self.base.checked_sub(x.base).unwrap().checked_add(extra).unwrap();
@@ -151,7 +201,6 @@ fn elt_base_bounds_check() {
 //------------------------------------------------------------------------------
 // 2D vectors with small granular interpolation steps.
 
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct V2 {
     pub x: V2Elt,
@@ -162,19 +211,31 @@ pub struct V2 {
 impl V2 {
     #[inline]
     pub fn rt_n<T: IsV2Elt>(&self, n: T) -> V2 {
-        V2 { x: self.x + n.to_v2elt(), y: self.y }
+        V2 {
+            x: self.x + n.to_v2elt(),
+            y: self.y,
+        }
     }
     #[inline]
     pub fn lf_n<T: IsV2Elt>(&self, n: T) -> V2 {
-        V2 { x: self.x.force_sub(n.to_v2elt()), y: self.y }
+        V2 {
+            x: self.x.force_sub(n.to_v2elt()),
+            y: self.y,
+        }
     }
     #[inline]
     pub fn up_n<T: IsV2Elt>(&self, n: T) -> V2 {
-        V2 { x: self.x, y: self.y.force_sub(n.to_v2elt()) }
+        V2 {
+            x: self.x,
+            y: self.y.force_sub(n.to_v2elt()),
+        }
     }
     #[inline]
     pub fn dn_n<T: IsV2Elt>(&self, n: T) -> V2 {
-        V2 { x: self.x, y: self.y + n.to_v2elt() }
+        V2 {
+            x: self.x,
+            y: self.y + n.to_v2elt(),
+        }
     }
     #[inline]
     pub fn rt(&self) -> V2 {
@@ -210,8 +271,8 @@ impl Sub<D2> for V2 {
 
     fn sub(self, other: D2) -> D2 {
         D2 {
-            x: self.x.into() - other.x,
-            y: self.y.into() - other.y,
+            x: D2Elt::from(self.x) - other.x,
+            y: D2Elt::from(self.y) - other.y,
         }
     }
 }
@@ -240,11 +301,8 @@ impl D2 {
 impl TryFrom<D2> for V2 {
     type Error = ();
     fn try_from(d: D2) -> Result<V2, ()> {
-        if d.x < V2Elt::MAX as D2Elt && d.y < V2Elt::MAX as D2Elt {
-            Ok(V2 {
-                x: d.x as V2Elt,
-                y: d.y as V2Elt,
-            })
+        if d.x < V2Elt::MAX.into() && d.y < V2Elt::MAX.into() {
+            Ok(d.force_into())
         } else {
             Err(())
         }
@@ -258,7 +316,10 @@ pub trait IsV2 {
 
 impl IsV2 for (V2Elt, V2Elt) {
     fn to_v2(&self) -> V2 {
-        V2 { x: self.0, y: self.1 }
+        V2 {
+            x: self.0,
+            y: self.1,
+        }
     }
 }
 
