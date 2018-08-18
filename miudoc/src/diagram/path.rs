@@ -4,25 +4,31 @@ use diagram::v2::*;
 use std::collections::HashSet;
 use std::collections::hash_set;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
 /// The field names have been kept short for easy comparison with the Markdeep
 /// source code.
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Path {
     /// Starting point for the path.
-    pub a: V2,
+    a: V2,
     /// Ending point for the path.
-    pub b: V2,
+    b: V2,
     /// A control point for the Bezier curve.
-    pub c: Option<V2>,
+    c: Option<V2>,
     /// A control point for the Bezier curve.
-    pub d: Option<V2>,
-    pub dashed: bool,
+    d: Option<V2>,
+    /// `- - -` vs `-----`.
+    dashed: bool,
 }
 
-pub const EPSILON: f64 = 1E-6;
+// Don't use EPSILON because we have proper types, not just number.
+// pub const EPSILON: f64 = 1E-6;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl Path {
+    pub fn new(a: V2, b: V2) -> Path {
+        Path { a, b, c: None, d: None, dashed: false }
+    }
+
     pub fn is_vertical(&self) -> bool {
         self.b.x == self.a.x
     }
