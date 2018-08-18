@@ -272,22 +272,23 @@ fn check<T, F: Fn(T) -> bool>(f: F, t: Option<T>) -> bool {
     }
 }
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 impl<'a> From<&'a str> for Grid {
     fn from(s: &str) -> Grid {
-        let mut final_width = MonoWidth(0);
+        let mut width = MonoWidth(0);
         let mut height = 0;
         let mut orig_widths = vec![];
         for line in s.lines() {
             let cur_width = MonoWidth(UnicodeWidthStr::width(line));
             orig_widths.push(cur_width);
-            final_width = max(final_width, cur_width);
+            width = max(width, cur_width);
             height += 1;
         }
+        let final_width = width.unwrap();
         let mut data: Vec<String> = Vec::with_capacity(height);
-        let MonoWidth(final_width_raw) = final_width;
         for (i, (line, MonoWidth(len))) in s.lines().zip(&orig_widths).enumerate() {
             data[i] = line.clone().to_string();
-            for _ in 0..(final_width_raw - len) {
+            for _ in 0..(final_width - len) {
                 data[i].push(' ');
             }
         }
@@ -302,7 +303,7 @@ fn line_contains(g: &Grid, a: V2, b: V2, c: char) -> bool {
     let dx = d.x;
     let dy = d.y;
     // let (dx, dy) = (D2Elt::signum(b.x as D2Elt - a.x as D2Elt), i64::signum(b.y as i64 - a.y as i64));
-    let (x, y) = (a.x as D2Elt, a.y as D2Elt);
+    let (mut x, mut y) = (a.x.into(), a.y.into());
     while x != b.x.into() || y != b.y.into() {
         if g.at(D2{x, y}.force_into()) == Some(c) {
             return true;
@@ -314,23 +315,23 @@ fn line_contains(g: &Grid, a: V2, b: V2, c: char) -> bool {
     g.at(D2{x, y}.force_into()) == Some(c)
 }
 
-fn find_paths(g: &Grid, ps: &mut PathSet) {
+fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     // Find all solid vertical lines. Iterate horizontally
     // so that we never hit the same line twice
     for x in 0 .. g.width() {
-        for y in 0 .. g.height() {
-            let v = V2{x, y};
+        for mut y in 0 .. g.height() {
+            let v = (x, y).to_v2();
             if g.is_solid_vline_at(v) {
                 // This character begins a vertical line...now, find the end
-                let a = V2{x, y};
+                let mut a = (x, y).to_v2();
                 // Replacement for do-while loop
-                g.set_used(V2{x, y});
+                g.set_used((x, y));
                 y += 1;
-                while g.is_solid_vline_at(V2{x, y}) {
-                    g.set_used(V2{x, y});
+                while g.is_solid_vline_at((x, y)) {
+                    g.set_used((x, y));
                     y += 1;
                 }
-                let b = V2{x, y: y - 1};
+                let mut b = (x, y - 1).to_v2();
 
                 {
                     let up = g.at_faux(a);
@@ -344,7 +345,8 @@ fn find_paths(g: &Grid, ps: &mut PathSet) {
                             || g.at_faux(a.up().rt()) == '_') {
                         // Stretch up to almost reach the line above (if there is a decoration,
                         // it will finish the gap)
-                        a.y -= 0.5;
+                        a.y -= Offset::HALF;
+                        // a.y -= 0.5;
                     }
                 }
 
@@ -359,7 +361,7 @@ fn find_paths(g: &Grid, ps: &mut PathSet) {
                             || g.at_faux(b.lf()) == '_'
                             || g.at_faux(b.rt()) == '_') {
                         // Stretch down to almost reach the line below
-                        b.y += 0.5
+                        b.y += Offset::HALF;
                     }
                 }
 
