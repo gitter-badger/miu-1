@@ -13,6 +13,13 @@ use std::convert::TryInto;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MonoWidth(usize);
 
+impl MonoWidth {
+    fn unwrap(&self) -> usize {
+        let MonoWidth(w) = self;
+        *w
+    }
+}
+
 #[derive(Debug)]
 pub struct Grid {
     /// Width according to a monospace font. This may or may not match the
@@ -47,12 +54,11 @@ fn is_exact(c: CharMatch) -> bool {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl Grid {
 
-    pub fn width(&self) -> V2Elt {
-        let MonoWidth(w) = self.width;
-        w.try_into().unwrap()
+    pub fn width(&self) -> V2EltBase {
+        self.width.unwrap().try_into().unwrap()
     }
 
-    pub fn height(&self) -> V2Elt {
+    pub fn height(&self) -> V2EltBase {
         self.height.try_into().unwrap()
     }
 
