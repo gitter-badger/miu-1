@@ -20,6 +20,9 @@ pub struct Grid {
     width: MonoWidth,
     height: usize,
     data: Vec<String>,
+    /// Yes, I recognize this is quite wasteful but we don't really expect
+    /// people to make humongous diagrams, so it should be okay...
+    used: Vec<bool>,
 }
 
 const EPSILON: f64 = 1E-6;
@@ -99,6 +102,16 @@ impl Grid {
             }
         }
         unreachable!();
+    }
+
+    pub fn is_used<T: IsV2>(&self, vv: T) -> bool {
+        let v = vv.to_v2();
+        self.used[v.y.round() * (self.width.unwrap() + 1) + v.x.round()]
+    }
+
+    pub fn set_used<T: IsV2>(&mut self, vv: T) {
+        let v = vv.to_v2();
+        self.used[v.y.round() * (self.width.unwrap() + 1) + v.x.round()] = true;
     }
 
     pub fn is_solid_vline_at<T: IsV2>(&self, vv: T) -> bool {
@@ -272,11 +285,8 @@ impl<'a> From<&'a str> for Grid {
                 data[i].push(' ');
             }
         }
-        Grid {
-            width: final_width,
-            height,
-            data,
-        }
+        let used = vec![false; height * final_width];
+        Grid {width, height, data, used}
     }
 }
 
