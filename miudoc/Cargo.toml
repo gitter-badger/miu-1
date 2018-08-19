@@ -13,5 +13,6 @@ name = "miu-doc"
 path = "src/main.rs"
 
 [dependencies]
+# TODO: Put proper versions here...
 regex = "*"
 unicode-width = "*"

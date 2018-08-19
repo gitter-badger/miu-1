@@ -11,6 +11,7 @@ use std::cmp::max;
 use std::convert::TryInto;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// Newtype wrapper for denoting character widths in integer multiples.
 pub struct MonoWidth(usize);
 
 impl MonoWidth {
@@ -20,24 +21,30 @@ impl MonoWidth {
     }
 }
 
+/// A Grid is an "unparsed" diagram -- it has characters but doesn't recognize
+/// shapes in the diagram by itself.
 #[derive(Debug)]
 pub struct Grid {
     /// Width according to a monospace font. This may or may not match the
     /// length of any String in data.
     width: MonoWidth,
     height: usize,
+    // TODO: Explain why we're using String here instead of [char] or
+    // something else
     data: Vec<String>,
     /// Yes, I recognize this is quite wasteful but we don't really expect
     /// people to make humongous diagrams, so it should be okay...
     used: Vec<bool>,
 }
 
-const EPSILON: f64 = 1E-6;
-
-/// In monospace fonts, Unicode assigns characters widths of 0, 1 or 2. So when
-/// we are asked for "the character" (1 M wide) at a position (x, y), the
-/// location may correspond to either the left or right of a 2-M wide char or
-/// to a 1-M wide char.
+/// In monospace fonts, Unicode assigns characters widths of 0, 1 or 2.
+///
+///     http://www.unicode.org/reports/tr11/
+///
+/// (For now, we ignore complications due to locale...)
+/// So when we are asked for "the character" (1-M wide) at a position (x, y),
+/// the location may correspond to either the left or right of a 2-M wide char
+/// or to a 1-M wide char.
 #[derive(Debug, PartialEq, Eq)]
 pub enum CharMatch {
     Left,
@@ -87,6 +94,10 @@ impl Grid {
     /// `0 <= x < 10` and `y == 0`.
     /// Note that in the presence of zero-width characters, it may happen that
     /// the returned char doesn't fully incorporate what will be displayed.
+    ///
+    /// TODO: The current implementation is extremely stupid because it scans
+    /// the line every time. We should cache results (because the grid is
+    /// immutable).
     pub fn at_precise<T: IsV2>(&self, v: T) -> (CharMatch, char) {
         let vv = v.to_v2();
         let x = vv.x.round();
