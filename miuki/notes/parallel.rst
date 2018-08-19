@@ -5,7 +5,10 @@ Blog posts related to Kentucky mule:
 #. `Kentucky Mule — limits of Scala typechecking speed
    <https://medium.com/@gkossakowski/kentucky-mule-limits-of-scala-typechecking-speed-6a44bd520a2f>`_
 
-Video related to Hack (parallel typechecker for FB's PHP dialect):
+Also see comments in this `Github issue <https://github.com/gkossakowski/kentuckymule/issues/6>`_.
+
+Video related to Hack (parallel typechecker for FB's PHP dialect), which
+as an inspiration for Kentucky Mule.
 https://www.youtube.com/watch?v=uXuYVUdFY48&t=346s
 
 Key takeaways:
