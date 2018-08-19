@@ -398,7 +398,7 @@ fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
                 }
 
                 // [MM] Don't insert degenerate lines
-                if a.x != b.x || a.y != b.y {
+                if a != b {
                     ps.insert(Path::straight(a, b));
                 }
 
@@ -440,6 +440,48 @@ fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
 }
 
 fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
+    for y in 0..g.height() {
+        for mut x in 0..g.width() {
+            let cur = (x, y).to_v2();
+            if g.is_solid_hline_at(cur) {
+                // [MM] Begins a line...find the end
+                let mut a = cur.clone();
+                // Replacement for do-while loop
+                g.set_used((x, y));
+                x += 1;
+                while g.is_solid_hline_at((x, y)) {
+                    g.set_used((x, y));
+                    x += 1;
+                }
+                let mut b = (x - 1, y).to_v2();
+
+                // [MM] Detect curves and shorten the edge
+                if !is_vertex(g.at_faux(a.lf()))
+                    && ((is_top_vertex(g.at_faux(a))
+                         && is_solid_vline_or_jump_or_point(g.at_faux(a.dn().lf())))
+                        ||
+                        (is_bot_vertex(g.at_faux(a))
+                         && is_solid_vline_or_jump_or_point(g.at_faux(a.up().lf())))) {
+                    a = a.rt();
+                }
+
+                if !is_vertex(g.at_faux(b.rt()))
+                    && ((is_top_vertex(g.at_faux(b))
+                         && is_solid_vline_or_jump_or_point(g.at_faux(b.dn().rt())))
+                        ||
+                        (is_bot_vertex(g.at_faux(b))
+                         && is_solid_vline_or_jump_or_point(g.at_faux(b.up().rt())))) {
+                    b = b.lf();
+                }
+
+                // [MM] Don't insert degenerate lines
+                if a != b {
+                    ps.insert(Path::straight(a, b));
+                }
+                // [MM] Continue the search from the end x+1
+            }
+        }
+    }
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -447,37 +489,6 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     find_solid_vlines(g, ps);
 
     find_solid_hlines(g, ps);
-    // // Find all solid horizontal lines
-    // for (var y = 0; y < grid.height; ++y) {
-    //     for (var x = 0; x < grid.width; ++x) {
-    //         if (grid.isSolidHLineAt(x, y)) {
-    //             // Begins a line...find the end
-    //             var A = Vec2(x, y);
-    //             do { grid.setUsed(x, y); ++x; } while (grid.isSolidHLineAt(x, y));
-    //             var B = Vec2(x - 1, y);
-
-    //             // Detect curves and shorten the edge
-    //             if ( ! isVertex(grid(A.x - 1, A.y)) &&
-    //                  ((is_top_vertex(grid(A)) && is_solid_vline_or_jump_or_point(grid(A.x - 1, A.y + 1))) ||
-    //                   (is_bot_vertex(grid(A)) && is_solid_vline_or_jump_or_point(grid(A.x - 1, A.y - 1))))) {
-    //                 ++A.x;
-    //             }
-
-    //             if ( ! isVertex(grid(B.x + 1, B.y)) &&
-    //                  ((is_top_vertex(grid(B)) && is_solid_vline_or_jump_or_point(grid(B.x + 1, B.y + 1))) ||
-    //                   (is_bot_vertex(grid(B)) && is_solid_vline_or_jump_or_point(grid(B.x + 1, B.y - 1))))) {
-    //                 --B.x;
-    //             }
-
-    //             // Don't insert degenerate lines
-    //             if ((A.x !== B.x) || (A.y !== B.y)) {
-    //                 pathSet.insert(new Path(A, B));
-    //             }
-    //             // Continue the search from the end x+1
-    //         }
-    //     }
-    // } // y
-
     // // Find all solid left-to-right downward diagonal lines (BACK DIAGONAL)
     // for (var i = -grid.height; i < grid.width; ++i) {
     //     for (var x = i, y = 0; y < grid.height; ++y, ++x) {
@@ -497,7 +508,7 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     //                 var up = grid(A.x, A.y - 1);
     //                 var uplt = grid(A.x - 1, A.y - 1);
     //                 if ((up === '/') || (uplt === '_') || (up === '_') ||
-    //                     (! isVertex(top)  &&
+    //                     (! is_vertex(top)  &&
     //                      (isSolidHLine(uplt) || isSolidVLine(uplt)))) {
     //                     // Continue half a cell more to connect for:
     //                     //  ___   ___
@@ -517,7 +528,7 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     //                 var dnrt = grid(B.x + 1, B.y + 1);
     //                 if ((grid(B.x, B.y + 1) === '/') || (grid(B.x + 1, B.y) === '_') ||
     //                     (grid(B.x - 1, B.y) === '_') ||
-    //                     (! isVertex(grid(B)) &&
+    //                     (! is_vertex(grid(B)) &&
     //                      (isSolidHLine(dnrt) || isSolidVLine(dnrt)))) {
     //                     // Continue half a cell more to connect for:
     //                     //                       \      \ |
@@ -562,7 +573,7 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     //                 var uprt = grid(B.x + 1, B.y - 1);
     //                 var bottom = grid(B);
     //                 if ((up === '\\') || (up === '_') || (uprt === '_') ||
-    //                     (! isVertex(grid(B)) &&
+    //                     (! is_vertex(grid(B)) &&
     //                      (isSolidHLine(uprt) || isSolidVLine(uprt)))) {
 
     //                     // Continue half a cell more to connect at:
@@ -585,7 +596,7 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     //                 var dnlt = grid(A.x - 1, A.y + 1);
     //                 var top = grid(A);
     //                 if ((grid(A.x, A.y + 1) === '\\') || (grid(A.x - 1, A.y) === '_') || (grid(A.x + 1, A.y) === '_') ||
-    //                     (! isVertex(grid(A)) &&
+    //                     (! is_vertex(grid(A)) &&
     //                      (isSolidHLine(dnlt) || isSolidVLine(dnlt)))) {
 
     //                     // Continue half a cell more to connect at:

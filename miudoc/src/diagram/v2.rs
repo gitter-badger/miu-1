@@ -393,6 +393,7 @@ impl From<V2> for D2 {
 /// doesn't compile because trait aliases haven't been implemented yet.
 /// The trait method also has a more descriptive name.
 pub trait IsV2Elt {
+    #[inline]
     fn to_v2elt(&self) -> V2Elt;
 }
 
@@ -427,6 +428,7 @@ impl IsV2Elt for V2Elt {
 /// doesn't compile because trait aliases haven't been implemented yet.
 /// The trait method also has a more descriptive name.
 pub trait IsV2 {
+    #[inline]
     fn to_v2(&self) -> V2;
 }
 
