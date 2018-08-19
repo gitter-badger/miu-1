@@ -40,8 +40,7 @@ Principles
    ``|``, "No unifying theme
             or (``|``, ``||``),
             application (``|>``, ``>|>``),
-            such that (comprehension/refinement),
-            parallel (comprehension/library ops)"
+            such that (comprehension/refinement)"
        , ""
    .. the double-quote is needed to prevent the comma from getting parsed as a
       separator :(
@@ -71,9 +70,9 @@ Whitespace
 
 Whitespace consists of spaces, tabs and newlines::
 
-    regex whitespace = (' '|'\t')+
-    regex newline = '\n' | '\r' '\n'
-    token whitespace-or-newline = whitespace | newline
+  regex whitespace = (' '|'\t')+
+  regex newline = '\n' | '\r' '\n'
+  token whitespace-or-newline = whitespace | newline
 
 Comments
 ========
@@ -124,6 +123,9 @@ Identifiers and Holes
 Identifiers
 -----------
 
+[TODO: Reserve something for extra uppercasing. Also check if Chinese characters
+are allowed here.]
+
 Legal identifiers have the following specification::
 
   regex digit-char = '\Nd'
@@ -151,19 +153,19 @@ There are two kinds of holes:
 #. Informative holes - These allow the user to tell the compiler "hey, I don't
    know what should be here, can you give me some suggestions?". Informative
    holes can be named/numbered.
-#. Abbreviation holes - These allow the user to tell the compiler "hey, I know
+#. Ignored holes - These allow the user to tell the compiler "hey, I know
    there is something here, I don't particularly care about it." They can serve
    as documentation while refactoring without making type signatures very large.
 
 Holes are supported to allow for a better interactive experience::
 
-  regex ident-hole = _
+  regex ident-hole = ?
   regex hole-name-char = letter-char | digit-char
-  token hole = _ hole-name-char+
-  token pattern-hole = _ hole-name-char+
-  token or-pattern-hole = _|
-  token abbrev-hole = ".."
-  -- NOTE: abbrev-hole is not lexed separately; the ".." symbol subsumes it.
+  token hole = ? hole-name-char+
+  token pattern-hole = ? hole-name-char+
+  token or-pattern-hole = ?|
+  token ignored-hole = ".."
+  -- NOTE: ignored-hole is not lexed separately; the ".." symbol subsumes it.
 
 Examples::
 
@@ -219,14 +221,16 @@ literals::
 Operators
 =========
 
-Operators are, erm, slightly complicated. The essential idea is that:
+[TODO: What characters will be allowed for Unicode operators.]
+
+Operators are, erm, slightly complicated. The core ideas are as follows:
 
 #. A small set of operators are allowed as single letter operators.
 #. The set is expanded to a "common set" (which is used in most places)
    for operators with 2 symbols.
 #. Operators beginning with a : are considered constructors except when
    immediately followed by '-', '=' or '.'.
-#. Operators with 3 symbols additionally allow a large set of characters
+#. Operators with 3 or more symbols additionally allow a large set of characters
    to be enclosed between symbols from the common set,
    including the ASCII 'o' as a stand-in for U+25cb '○'.
 
