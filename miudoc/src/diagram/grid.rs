@@ -12,6 +12,7 @@ use unicode_width::UnicodeWidthStr;
 
 use std::cell::RefCell;
 use std::cmp::max;
+use std::convert::TryFrom;
 use std::convert::TryInto;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -487,142 +488,176 @@ fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-fn find_solid_backdiag(g: &mut Grid, ps: &mut PathSet) {
-    // // Find all solid left-to-right downward diagonal lines (BACK DIAGONAL)
-    // for (var i = -grid.height; i < grid.width; ++i) {
-    //     for (var x = i, y = 0; y < grid.height; ++y, ++x) {
-    //         if (grid.isSolidBLineAt(x, y)) {
-    //             // Begins a line...find the end
-    //             var A = Vec2(x, y);
-    //             do { ++x; ++y; } while (grid.isSolidBLineAt(x, y));
-    //             var B = Vec2(x - 1, y - 1);
+fn find_solid_blines(g: &mut Grid, ps: &mut PathSet) {
+    for i in -(g.width() as D2EltBase) .. (g.height() as D2EltBase) {
+        // Yay type safety!
+        let iters = (i ..).zip(0 .. g.height())
+            .filter_map(|(x, y)| V2EltBase::try_from(x).ok().map(|x| (x, y)));
+        for (mut x, mut y) in iters {
+            let cur = (x, y).to_v2();
+            if g.is_solid_bline_at(cur) {
+                // [MM] Begins a line...find the end
+                let mut a = cur.clone();
+                // Desugar do-while loop
+                x += 1;
+                y += 1;
+                while g.is_solid_bline_at((x, y)) {
+                    x += 1;
+                    y += 1;
+                }
+                let mut b = (x - 1, y - 1).to_v2();
 
-    //             // Ensure that the entire line wasn't just vertices
-    //             if (lineContains(A, B, '\\')) {
-    //                 for (var j = A.x; j <= B.x; ++j) {
-    //                     grid.setUsed(j, A.y + (j - A.x));
-    //                 }
-
-    //                 var top = grid(A);
-    //                 var up = grid(A.x, A.y - 1);
-    //                 var uplt = grid(A.x - 1, A.y - 1);
-    //                 if ((up === '/') || (uplt === '_') || (up === '_') ||
-    //                     (! is_vertex(top)  &&
-    //                      (isSolidHLine(uplt) || isSolidVLine(uplt)))) {
-    //                     // Continue half a cell more to connect for:
-    //                     //  ___   ___
-    //                     //  \        \    /      ----     |
-    //                     //   \        \   \        ^      |^
-    //                     A.x -= 0.5; A.y -= 0.5;
-    //                 } else if (isPoint(uplt)) {
-    //                     // Continue 1/4 cell more to connect for:
-    //                     //
-    //                     //  o
-    //                     //   ^
-    //                     //    \
-    //                     A.x -= 0.25; A.y -= 0.25;
-    //                 }
-
-    //                 var bottom = grid(B);
-    //                 var dnrt = grid(B.x + 1, B.y + 1);
-    //                 if ((grid(B.x, B.y + 1) === '/') || (grid(B.x + 1, B.y) === '_') ||
-    //                     (grid(B.x - 1, B.y) === '_') ||
-    //                     (! is_vertex(grid(B)) &&
-    //                      (isSolidHLine(dnrt) || isSolidVLine(dnrt)))) {
-    //                     // Continue half a cell more to connect for:
-    //                     //                       \      \ |
-    //                     //  \       \     \       v      v|
-    //                     //   \__   __\    /      ----     |
-
-    //                     B.x += 0.5; B.y += 0.5;
-    //                 } else if (isPoint(dnrt)) {
-    //                     // Continue 1/4 cell more to connect for:
-    //                     //
-    //                     //    \
-    //                     //     v
-    //                     //      o
-
-    //                     B.x += 0.25; B.y += 0.25;
-    //                 }
-
-    //                 pathSet.insert(new Path(A, B));
-    //                 // Continue the search from the end x+1,y+1
-    //             } // lineContains
-    //         }
-    //     }
-    // } // i
+                // Ensure that the entire line wasn't just vertices
+                if line_contains(g, a, b, '\\') {
+                    assert!(a.is_exact() && b.is_exact());
+                    for j in a.x.round() ..= b.x.round() {
+                        // Why the fuck is there no TryFrom<usize> for u32?
+                        let conv = |x: usize| -> V2Elt { x.try_into().unwrap() };
+                        g.set_used((conv(j), conv(a.y.round() + (j - a.x.round()))));
+                    }
+                    {
+                        // Top point of the backdiag
+                        let up_lf = g.at_faux(a.up().lf());
+                        let up = g.at_faux(a.up());
+                        let bd_top = g.at_faux(a);
+                        if up == '/' || up_lf == '_' || up == '_'
+                            || (!is_vertex(bd_top)
+                                && (is_solid_hline(up_lf) || is_solid_vline(up_lf))) {
+                            // Continue half a cell more to connect for:
+                            //  ___   ___
+                            //  \        \    /      ----     |
+                            //   \        \   \        ^      |^
+                            a.x -= Offset::HALF;
+                            a.y -= Offset::HALF;
+                        } else if is_point(up_lf) {
+                            // Continue 1/4 cell more to connect for:
+                            //
+                            //  o
+                            //   ^
+                            //    \
+                            a.x -= Offset::QUARTER;
+                            a.y -= Offset::QUARTER;
+                        }
+                    }
+                    {
+                        // Bottom point of the backdiag
+                        let lf = g.at_faux(b.lf());
+                        let bd_bot = g.at_faux(b);
+                        let rt = g.at_faux(b.rt());
+                        let dn = g.at_faux(b.dn());
+                        let dn_rt = g.at_faux(b.dn().rt());
+                        if dn == '/' || rt == '_' || lf == '_'
+                            || (!is_vertex(bd_bot)
+                                && (is_solid_hline(dn_rt) || is_solid_vline(dn_rt))) {
+                            // Continue half a cell more to connect for:
+                            //                       \      \ |
+                            //  \       \     \       v      v|
+                            //   \__   __\    /      ----     |
+                            b.x += Offset::HALF;
+                            b.y += Offset::HALF;
+                        } else if is_point(dn_rt) {
+                            // Continue 1/4 cell more to connect for:
+                            //
+                            //    \
+                            //     v
+                            //      o
+                            b.x += Offset::QUARTER;
+                            b.y += Offset::QUARTER;
+                        }
+                    }
+                    ps.insert(Path::straight(a, b));
+                    // [MM] Continue the search from the end x+1,y+1
+                }
+            }
+        }
+    }
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-fn find_solid_diagonal(g: &mut Grid, ps: &mut PathSet) {
-    // // Find all solid left-to-right upward diagonal lines (DIAGONAL)
-    // for (var i = -grid.height; i < grid.width; ++i) {
-    //     for (var x = i, y = grid.height - 1; y >= 0; --y, ++x) {
-    //         if (grid.isSolidDLineAt(x, y)) {
-    //             // Begins a line...find the end
-    //             var A = Vec2(x, y);
-    //             do { ++x; --y; } while (grid.isSolidDLineAt(x, y));
-    //             var B = Vec2(x - 1, y + 1);
+fn find_solid_dlines(g: &mut Grid, ps: &mut PathSet) {
+    // [MM] Find all solid left-to-right upward diagonal lines (DIAGONAL)
+    for i in -(g.height() as D2EltBase) .. (g.width() as D2EltBase) {
+        // Yay type safety!
+        let iters = (i ..).zip((g.height() - 1) ..= 0)
+            .filter_map(|(x, y)| V2EltBase::try_from(x).ok().map(|x| (x, y)));
+        for (mut x, mut y) in iters {
+            let cur = (x, y).to_v2();
+            if g.is_solid_dline_at(cur) {
+                // [MM] Begins a line...find the end
+                let mut a = cur.clone();
+                // Desugar do-while loop
+                x += 1;
+                y -= 1;
+                while g.is_solid_dline_at((x, y)) {
+                    x += 1;
+                    y -= 1;
+                }
+                let mut b = (x - 1, y + 1).to_v2();
 
-    //             if (lineContains(A, B, '/')) {
-    //                 // This is definitely a line. Commit the characters on it
-    //                 for (var j = A.x; j <= B.x; ++j) {
-    //                     grid.setUsed(j, A.y - (j - A.x));
-    //                 }
+                if line_contains(g, a, b, '/') {
+                    assert!(a.is_exact() && b.is_exact());
+                    // [MM] This is definitely a line. Commit the characters on it
+                    for j in a.x.round() ..= b.x.round() {
+                        // Why the fuck is there no TryFrom<usize> for u32?
+                        let conv = |x: usize| -> V2Elt { x.try_into().unwrap() };
+                        g.set_used((conv(j), conv(a.y.round() - (j - a.x.round()))));
+                    }
+                    {
+                        // Bottom point for diagonal
+                        let up = g.at_faux(b.up());
+                        let up_rt = g.at_faux(b.up().rt());
+                        let dg_bot = g.at_faux(b);
 
-    //                 var up = grid(B.x, B.y - 1);
-    //                 var uprt = grid(B.x + 1, B.y - 1);
-    //                 var bottom = grid(B);
-    //                 if ((up === '\\') || (up === '_') || (uprt === '_') ||
-    //                     (! is_vertex(grid(B)) &&
-    //                      (isSolidHLine(uprt) || isSolidVLine(uprt)))) {
-
-    //                     // Continue half a cell more to connect at:
-    //                     //     __   __  ---     |
-    //                     //    /      /   ^     ^|
-    //                     //   /      /   /     / |
-
-    //                     B.x += 0.5; B.y -= 0.5;
-    //                 } else if (isPoint(uprt)) {
-
-    //                     // Continue 1/4 cell more to connect at:
-    //                     //
-    //                     //       o
-    //                     //      ^
-    //                     //     /
-
-    //                     B.x += 0.25; B.y -= 0.25;
-    //                 }
-
-    //                 var dnlt = grid(A.x - 1, A.y + 1);
-    //                 var top = grid(A);
-    //                 if ((grid(A.x, A.y + 1) === '\\') || (grid(A.x - 1, A.y) === '_') || (grid(A.x + 1, A.y) === '_') ||
-    //                     (! is_vertex(grid(A)) &&
-    //                      (isSolidHLine(dnlt) || isSolidVLine(dnlt)))) {
-
-    //                     // Continue half a cell more to connect at:
-    //                     //               /     \ |
-    //                     //    /  /      v       v|
-    //                     // __/  /__   ----       |
-
-    //                     A.x -= 0.5; A.y += 0.5;
-    //                 } else if (isPoint(dnlt)) {
-
-    //                     // Continue 1/4 cell more to connect at:
-    //                     //
-    //                     //       /
-    //                     //      v
-    //                     //     o
-
-    //                     A.x -= 0.25; A.y += 0.25;
-    //                 }
-    //                 pathSet.insert(new Path(A, B));
-
-    //                 // Continue the search from the end x+1,y-1
-    //             } // lineContains
-    //         }
-    //     }
-    // } // y
+                        if up == '\\' || up == '_' || up_rt == '_'
+                            || (! is_vertex(dg_bot)
+                                && (is_solid_hline(up_rt) || is_solid_vline(up_rt))) {
+                            // [MM] Continue half a cell more to connect at:
+                            //     __   __  ---     |
+                            //    /      /   ^     ^|
+                            //   /      /   /     / |
+                            b.x += Offset::HALF;
+                            b.y -= Offset::HALF;
+                        } else if is_point(up_rt) {
+                            // [MM] Continue 1/4 cell more to connect at:
+                            //
+                            //       o
+                            //      ^
+                            //     /
+                            b.x += Offset::QUARTER;
+                            b.y -= Offset::QUARTER;
+                        }
+                    }
+                    {
+                        let lf = g.at_faux(a.lf());
+                        let dg_top = g.at_faux(a);
+                        let rt = g.at_faux(a.rt());
+                        let dn_lf = g.at_faux(a.dn().lf());
+                        let dn = g.at_faux(a.dn());
+                        if dn == '\\' || lf == '_' || rt == '_'
+                            || (!is_vertex(dg_top)
+                                && (is_solid_hline(dn_lf) || is_solid_vline(dn_lf))) {
+                            // Continue half a cell more to connect at:
+                            //               /     \ |
+                            //    /  /      v       v|
+                            // __/  /__   ----       |
+                            a.x -= Offset::HALF;
+                            a.y += Offset::HALF;
+                        } else if is_point(dn_lf) {
+                            // Continue 1/4 cell more to connect at:
+                            //
+                            //       /
+                            //      v
+                            //     o
+                            a.x -= Offset::QUARTER;
+                            a.y += Offset::QUARTER;
+                        }
+                    }
+                    ps.insert(Path::straight(a, b));
+                    // [MM] Continue the search from the end x+1,y-1
+                }
+            }
+        }
+    }
 }
 
 fn find_curved_corners(g: &mut Grid, ps: &mut PathSet) {
@@ -631,23 +666,23 @@ fn find_curved_corners(g: &mut Grid, ps: &mut PathSet) {
     // // horizontally-adjacent characters.
     // for (var y = 0; y < grid.height; ++y) {
     //     for (var x = 0; x < grid.width; ++x) {
-    //         var c = grid(x, y);
+    //         let c = g.at_faux(x, y);
 
     //         // Note that because of undirected vertices, the
     //         // following cases are not exclusive
     //         if (is_top_vertex(c)) {
     //             // -.
     //             //   |
-    //             if (isSolidHLine(grid(x - 1, y)) && isSolidVLine(grid(x + 1, y + 1))) {
-    //                 grid.setUsed(x - 1, y); grid.setUsed(x, y); grid.setUsed(x + 1, y + 1);
+    //             if (is_solid_hline(g.at_faux(x - 1, y)) && is_solid_vline(g.at_faux(x + 1, y + 1))) {
+    //                 grid.set_used(x - 1, y); grid.set_used(x, y); grid.set_used(x + 1, y + 1);
     //                 pathSet.insert(new Path(Vec2(x - 1, y), Vec2(x + 1, y + 1),
     //                                         Vec2(x + 1.1, y), Vec2(x + 1, y + 1)));
     //             }
 
     //             //  .-
     //             // |
-    //             if (isSolidHLine(grid(x + 1, y)) && isSolidVLine(grid(x - 1, y + 1))) {
-    //                 grid.setUsed(x - 1, y + 1); grid.setUsed(x, y); grid.setUsed(x + 1, y);
+    //             if (is_solid_hline(g.at_faux(x + 1, y)) && is_solid_vline(g.at_faux(x - 1, y + 1))) {
+    //                 grid.set_used(x - 1, y + 1); grid.set_used(x, y); grid.set_used(x + 1, y);
     //                 pathSet.insert(new Path(Vec2(x + 1, y), Vec2(x - 1, y + 1),
     //                                         Vec2(x - 1.1, y), Vec2(x - 1, y + 1)));
     //             }
@@ -657,14 +692,14 @@ fn find_curved_corners(g: &mut Grid, ps: &mut PathSet) {
     //         //   .  .   .  .
     //         //  (  o     )  o
     //         //   '  .   '  '
-    //         if (((c === ')') || isPoint(c)) && (grid(x - 1, y - 1) === '.') && (grid(x - 1, y + 1) === "\'")) {
-    //             grid.setUsed(x, y); grid.setUsed(x - 1, y - 1); grid.setUsed(x - 1, y + 1);
+    //         if (((c == ')') || is_point(c)) && (g.at_faux(x - 1, y - 1) == '.') && (g.at_faux(x - 1, y + 1) == "\'")) {
+    //             grid.set_used(x, y); grid.set_used(x - 1, y - 1); grid.set_used(x - 1, y + 1);
     //             pathSet.insert(new Path(Vec2(x - 2, y - 1), Vec2(x - 2, y + 1),
     //                                     Vec2(x + 0.6, y - 1), Vec2(x + 0.6, y + 1)));
     //         }
 
-    //         if (((c === '(') || isPoint(c)) && (grid(x + 1, y - 1) === '.') && (grid(x + 1, y + 1) === "\'")) {
-    //             grid.setUsed(x, y); grid.setUsed(x + 1, y - 1); grid.setUsed(x + 1, y + 1);
+    //         if (((c == '(') || is_point(c)) && (g.at_faux(x + 1, y - 1) == '.') && (g.at_faux(x + 1, y + 1) == "\'")) {
+    //             grid.set_used(x, y); grid.set_used(x + 1, y - 1); grid.set_used(x + 1, y + 1);
     //             pathSet.insert(new Path(Vec2(x + 2, y - 1), Vec2(x + 2, y + 1),
     //                                     Vec2(x - 0.6, y - 1), Vec2(x - 0.6, y + 1)));
     //         }
@@ -672,16 +707,16 @@ fn find_curved_corners(g: &mut Grid, ps: &mut PathSet) {
     //         if (is_bot_vertex(c)) {
     //             //   |
     //             // -'
-    //             if (isSolidHLine(grid(x - 1, y)) && isSolidVLine(grid(x + 1, y - 1))) {
-    //                 grid.setUsed(x - 1, y); grid.setUsed(x, y); grid.setUsed(x + 1, y - 1);
+    //             if (is_solid_hline(g.at_faux(x - 1, y)) && is_solid_vline(g.at_faux(x + 1, y - 1))) {
+    //                 grid.set_used(x - 1, y); grid.set_used(x, y); grid.set_used(x + 1, y - 1);
     //                 pathSet.insert(new Path(Vec2(x - 1, y), Vec2(x + 1, y - 1),
     //                                         Vec2(x + 1.1, y), Vec2(x + 1, y - 1)));
     //             }
 
     //             // |
     //             //  '-
-    //             if (isSolidHLine(grid(x + 1, y)) && isSolidVLine(grid(x - 1, y - 1))) {
-    //                 grid.setUsed(x - 1, y - 1); grid.setUsed(x, y); grid.setUsed(x + 1, y);
+    //             if (is_solid_hline(g.at_faux(x + 1, y)) && is_solid_vline(g.at_faux(x - 1, y - 1))) {
+    //                 grid.set_used(x - 1, y - 1); grid.set_used(x, y); grid.set_used(x + 1, y);
     //                 pathSet.insert(new Path(Vec2(x + 1, y), Vec2(x - 1, y - 1),
     //                                         Vec2(x - 1.1, y), Vec2(x - 1, y - 1)));
     //             }
@@ -703,64 +738,64 @@ fn find_low_horizontal_lines(g: &mut Grid, ps: &mut PathSet) {
     // // identifier such as __FILE__ embedded in the diagram.
     // for (var y = 0; y < grid.height; ++y) {
     //     for (var x = 0; x < grid.width - 2; ++x) {
-    //         var lt = grid(x - 1, y);
+    //         let lt = g.at_faux(x - 1, y);
 
-    //         if ((grid(x, y) === '_') && (grid(x + 1, y) === '_') &&
-    //             (! isASCIILetter(grid(x + 2, y)) || (lt === '_')) &&
-    //             (! isASCIILetter(lt) || (grid(x + 2, y) === '_'))) {
+    //         if ((g.at_faux(x, y) == '_') && (g.at_faux(x + 1, y) == '_') &&
+    //             (! isASCIILetter(g.at_faux(x + 2, y)) || (lt == '_')) &&
+    //             (! isASCIILetter(lt) || (g.at_faux(x + 2, y) == '_'))) {
 
-    //             var ltlt = grid(x - 2, y);
-    //             var A = Vec2(x - 0.5, y + 0.5);
+    //             let ltlt = g.at_faux(x - 2, y);
+    //             let A = Vec2(x - Offset::HALF, y + Offset::HALF);
 
-    //             if ((lt === '|') || (grid(x - 1, y + 1) === '|') ||
-    //                 (lt === '.') || (grid(x - 1, y + 1) === "'")) {
+    //             if ((lt == '|') || (g.at_faux(x - 1, y + 1) == '|') ||
+    //                 (lt == '.') || (g.at_faux(x - 1, y + 1) == "'")) {
     //                 // Extend to meet adjacent vertical
-    //                 A.x -= 0.5;
+    //                 A.x -= Offset::HALF;
 
     //                 // Very special case of overrunning into the side of a curve,
     //                 // needed for logic gate diagrams
-    //                 if ((lt === '.') &&
-    //                     ((ltlt === '-') ||
-    //                      (ltlt === '.')) &&
-    //                     (grid(x - 2, y + 1) === '(')) {
-    //                     A.x -= 0.5;
+    //                 if ((lt == '.') &&
+    //                     ((ltlt == '-') ||
+    //                      (ltlt == '.')) &&
+    //                     (g.at_faux(x - 2, y + 1) == '(')) {
+    //                     A.x -= Offset::HALF;
     //                 }
-    //             } else if (lt === '/') {
+    //             } else if (lt == '/') {
     //                 A.x -= 1.0;
     //             }
 
     //             // Detect overrun of a tight double curve
-    //             if ((lt === '(') && (ltlt === '(') &&
-    //                 (grid(x, y + 1) === "'") && (grid(x, y - 1) === '.')) {
-    //                 A.x += 0.5;
+    //             if ((lt == '(') && (ltlt == '(') &&
+    //                 (g.at_faux(x, y + 1) == "'") && (g.at_faux(x, y - 1) == '.')) {
+    //                 A.x += Offset::HALF;
     //             }
     //             lt = ltlt = undefined;
 
-    //             do { grid.setUsed(x, y); ++x; } while (grid(x, y) === '_');
+    //             do { grid.set_used(x, y); ++x; } while (g.at_faux(x, y) == '_');
 
-    //             var B = Vec2(x - 0.5, y + 0.5);
-    //             var c = grid(x, y);
-    //             var rt = grid(x + 1, y);
-    //             var dn = grid(x, y + 1);
+    //             let B = Vec2(x - Offset::HALF, y + Offset::HALF);
+    //             let c = g.at_faux(x, y);
+    //             let rt = g.at_faux(x + 1, y);
+    //             let dn = g.at_faux(x, y + 1);
 
-    //             if ((c === '|') || (dn === '|') || (c === '.') || (dn === "'")) {
+    //             if ((c == '|') || (dn == '|') || (c == '.') || (dn == "'")) {
     //                 // Extend to meet adjacent vertical
-    //                 B.x += 0.5;
+    //                 B.x += Offset::HALF;
 
     //                 // Very special case of overrunning into the side of a curve,
     //                 // needed for logic gate diagrams
-    //                 if ((c === '.') &&
-    //                     ((rt === '-') || (rt === '.')) &&
-    //                     (grid(x + 1, y + 1) === ')')) {
-    //                     B.x += 0.5;
+    //                 if ((c == '.') &&
+    //                     ((rt == '-') || (rt == '.')) &&
+    //                     (g.at_faux(x + 1, y + 1) == ')')) {
+    //                     B.x += Offset::HALF;
     //                 }
-    //             } else if ((c === '\\')) {
+    //             } else if ((c == '\\')) {
     //                 B.x += 1.0;
     //             }
 
     //             // Detect overrun of a tight double curve
-    //             if ((c === ')') && (rt === ')') && (grid(x - 1, y + 1) === "'") && (grid(x - 1, y - 1) === '.')) {
-    //                 B.x += -0.5;
+    //             if ((c == ')') && (rt == ')') && (g.at_faux(x - 1, y + 1) == "'") && (g.at_faux(x - 1, y - 1) == '.')) {
+    //                 B.x += -Offset::HALF;
     //             }
 
     //             pathSet.insert(new Path(A, B));
@@ -775,9 +810,9 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
 
     find_solid_hlines(g, ps);
 
-    find_solid_backdiag(g, ps);
+    find_solid_blines(g, ps);
 
-    find_solid_diagonal(g, ps);
+    find_solid_dlines(g, ps);
 
     find_curved_corners(g, ps);
 

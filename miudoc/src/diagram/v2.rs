@@ -90,6 +90,10 @@ impl V2Elt {
         let extra = if self.offset.get() < Offset::DIVS / 2 { 0 } else { 1 };
         self.base as usize + extra
     }
+
+    pub fn is_exact(&self) -> bool {
+        self.offset == Offset::ZERO
+    }
 }
 
 //----------------------------------------------------------
@@ -327,6 +331,9 @@ impl V2 {
     #[inline]
     pub fn dn(&self) -> V2 {
         self.dn_n(1)
+    }
+    pub fn is_exact(&self) -> bool {
+        self.x.is_exact() && self.y.is_exact()
     }
 }
 
