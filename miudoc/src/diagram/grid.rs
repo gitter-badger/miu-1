@@ -1,4 +1,6 @@
 // TODO: Everything is marked as pub for now but that should be changed later.
+// NOTE: Comments marked with [MM] have bee directly copied from Markdeep's source
+// code (written by Morgan McGuire).
 
 use diagram::path::*;
 use diagram::primitives::*;
@@ -70,6 +72,7 @@ fn is_exact(c: CharMatch) -> bool {
 
 // NOTE: I use the suffix lf instead of lt (as in the `markdeep` source) so that
 // there is less chance of mixing up lf and rt.
+// Skip formatting because rustfmt messes up the conditionals.
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl Grid {
 
@@ -190,7 +193,7 @@ impl Grid {
         let rt_rt = self.at_faux(v.rt_n(2));
 
         if is_solid_hline(c) || (is_solid_hline(lf) && is_jump(c)) {
-            // Looks like a horizontal line...does it continue? We need three in a row.
+            // [MM] Looks like a horizontal line...does it continue? We need three in a row.
             if is_solid_hline(lf) {
                 is_solid_hline(rt)    || is_vertex_or_right_decoration(rt) ||
                 is_solid_hline(lf_lf) || is_vertex_or_left_decoration(lf_lf)
@@ -226,7 +229,7 @@ impl Grid {
         let dn_rt = self.at_faux(v.dn().rt());
 
         if c == '\\' {
-            // Looks like a diagonal line...does it continue? We need two in a row.
+            // [MM] Looks like a diagonal line...does it continue? We need two in a row.
             is_solid_bline(dn_rt) || is_bot_vertex(dn_rt) || is_point(dn_rt) || dn_rt == 'v' ||
             is_solid_bline(up_lf) || is_top_vertex(up_lf) || is_point(up_lf) || up_lf == '^' ||
             up == '/' || dn == '/' || dn_rt == '_' || up_lf == '_'
@@ -339,16 +342,16 @@ fn line_contains(g: &Grid, a: V2, b: V2, c: char) -> bool {
     g.at(D2{x, y}.force_into()) == Some(c)
 }
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
-fn find_paths(g: &mut Grid, ps: &mut PathSet) {
-    // Find all solid vertical lines. Iterate horizontally
+fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
+    // [MM] Find all solid vertical lines. Iterate horizontally
     // so that we never hit the same line twice
-    for x in 0 .. g.width() {
-        for mut y in 0 .. g.height() {
-            let v = (x, y).to_v2();
-            if g.is_solid_vline_at(v) {
-                // This character begins a vertical line...now, find the end
-                let mut a = (x, y).to_v2();
+    for x in 0..g.width() {
+        for mut y in 0..g.height() {
+            let cur = (x, y).to_v2();
+            // TODO: Refactor this block out into a function.
+            if g.is_solid_vline_at(cur) {
+                // [MM] This character begins a vertical line...now, find the end
+                let mut a = cur.clone();
                 // Replacement for do-while loop
                 g.set_used((x, y));
                 y += 1;
@@ -364,14 +367,16 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
 
                     // TODO: Understand black magic.
                     if !is_vertex(up)
-                        && (up_up == '-' || up_up == '_'
-                            || is_bot_vertex(up_up) || is_jump(up_up)
+                        && (up_up == '-'
+                            || up_up == '_'
+                            || is_bot_vertex(up_up)
+                            || is_jump(up_up)
                             || g.at_faux(a.up().lf()) == '_'
-                            || g.at_faux(a.up().rt()) == '_') {
-                        // Stretch up to almost reach the line above (if there is a decoration,
-                        // it will finish the gap)
+                            || g.at_faux(a.up().rt()) == '_')
+                    {
+                        // [MM] Stretch up to almost reach the line above
+                        // (if there is a decoration, it will finish the gap)
                         a.y -= Offset::HALF;
-                        // a.y -= 0.5;
                     }
                 }
 
@@ -382,46 +387,66 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
                     // TODO: Understand black magic.
                     if !is_vertex(dn)
                         && (dn_dn == '-'
-                            || is_top_vertex(dn_dn) || is_jump(dn_dn)
+                            || is_top_vertex(dn_dn)
+                            || is_jump(dn_dn)
                             || g.at_faux(b.lf()) == '_'
-                            || g.at_faux(b.rt()) == '_') {
-                        // Stretch down to almost reach the line below
+                            || g.at_faux(b.rt()) == '_')
+                    {
+                        // [MM] Stretch down to almost reach the line below
                         b.y += Offset::HALF;
                     }
                 }
 
-                // Don't insert degenerate lines
+                // [MM] Don't insert degenerate lines
                 if a.x != b.x || a.y != b.y {
-                    ps.insert(Path::new(a, b));
+                    ps.insert(Path::straight(a, b));
                 }
 
-                // Continue the search from the end value y+1
+            // [MM] Continue the search from the end value y+1
             }
+            // [MM] Some very special patterns for the short lines needed on
+            // circuit diagrams. Only invoke these if not also on a curve
+            //      _  _
+            //    -'    '-
+            else if g.at_faux(cur) == '\''
+                && ((g.at_faux(cur.lf()) == '-'
+                    && g.at_faux(cur.up().rt()) == '_'
+                    && !is_solid_vline_or_jump_or_point(g.at_faux(cur.up().lf())))
+                    || (g.at_faux(cur.up().lf()) == '_'
+                        && g.at_faux(cur.rt()) == '-'
+                        && !is_solid_vline_or_jump_or_point(g.at_faux(cur.up().rt()))))
+            {
+                ps.insert(Path::straight(
+                    (cur.x, cur.y - Offset::HALF).to_v2(),
+                    cur.clone(),
+                ));
+            }
+            // [MM]   _.-  -._
+            else if g.at_faux(cur) == '.'
+                && ((g.at_faux(cur.lf()) == '_'
+                    && g.at_faux(cur.rt()) == '-'
+                    && !is_solid_vline_or_jump_or_point(g.at_faux(cur.dn().rt())))
+                    || (g.at_faux(cur.lf()) == '-'
+                        && g.at_faux(cur.rt()) == '_'
+                        && !is_solid_vline_or_jump_or_point(g.at_faux(cur.dn().lf()))))
+            {
+                ps.insert(Path::straight(
+                    cur.clone(),
+                    (cur.x, cur.y + Offset::HALF).to_v2(),
+                ));
+            }
+        }
+    }
+}
 
-            // // Some very special patterns for the short lines needed on
-            // // circuit diagrams. Only invoke these if not also on a curve
-            // //      _  _
-            // //    -'    '-
-            // else if ((grid(x, y) === "'") &&
-            //     (((grid(x - 1, y) === '-') && (grid(x + 1, y - 1) === '_') &&
-            //      ! isSolidVLineOrJumpOrPoint(grid(x - 1, y - 1))) ||
-            //      ((grid(x - 1, y - 1) === '_') && (grid(x + 1, y) === '-') &&
-            //      ! isSolidVLineOrJumpOrPoint(grid(x + 1, y - 1))))) {
-            //     pathSet.insert(new Path(Vec2(x, y - 0.5), Vec2(x, y)));
-            // }
+fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
+}
 
-            // //    _.-  -._
-            // else if ((grid(x, y) === '.') &&
-            //          (((grid(x - 1, y) === '_') && (grid(x + 1, y) === '-') &&
-            //            ! isSolidVLineOrJumpOrPoint(grid(x + 1, y + 1))) ||
-            //           ((grid(x - 1, y) === '-') && (grid(x + 1, y) === '_') &&
-            //            ! isSolidVLineOrJumpOrPoint(grid(x - 1, y + 1))))) {
-            //     pathSet.insert(new Path(Vec2(x, y), Vec2(x, y + 0.5)));
-            // }
+#[cfg_attr(rustfmt, rustfmt_skip)]
+fn find_paths(g: &mut Grid, ps: &mut PathSet) {
+    find_solid_vlines(g, ps);
 
-        } // y
-    } // x
-
+    find_solid_hlines(g, ps);
     // // Find all solid horizontal lines
     // for (var y = 0; y < grid.height; ++y) {
     //     for (var x = 0; x < grid.width; ++x) {
@@ -433,14 +458,14 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
 
     //             // Detect curves and shorten the edge
     //             if ( ! isVertex(grid(A.x - 1, A.y)) &&
-    //                  ((isTopVertex(grid(A)) && isSolidVLineOrJumpOrPoint(grid(A.x - 1, A.y + 1))) ||
-    //                   (isBottomVertex(grid(A)) && isSolidVLineOrJumpOrPoint(grid(A.x - 1, A.y - 1))))) {
+    //                  ((is_top_vertex(grid(A)) && is_solid_vline_or_jump_or_point(grid(A.x - 1, A.y + 1))) ||
+    //                   (is_bot_vertex(grid(A)) && is_solid_vline_or_jump_or_point(grid(A.x - 1, A.y - 1))))) {
     //                 ++A.x;
     //             }
 
     //             if ( ! isVertex(grid(B.x + 1, B.y)) &&
-    //                  ((isTopVertex(grid(B)) && isSolidVLineOrJumpOrPoint(grid(B.x + 1, B.y + 1))) ||
-    //                   (isBottomVertex(grid(B)) && isSolidVLineOrJumpOrPoint(grid(B.x + 1, B.y - 1))))) {
+    //                  ((is_top_vertex(grid(B)) && is_solid_vline_or_jump_or_point(grid(B.x + 1, B.y + 1))) ||
+    //                   (is_bot_vertex(grid(B)) && is_solid_vline_or_jump_or_point(grid(B.x + 1, B.y - 1))))) {
     //                 --B.x;
     //             }
 
@@ -597,7 +622,7 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
 
     //         // Note that because of undirected vertices, the
     //         // following cases are not exclusive
-    //         if (isTopVertex(c)) {
+    //         if (is_top_vertex(c)) {
     //             // -.
     //             //   |
     //             if (isSolidHLine(grid(x - 1, y)) && isSolidVLine(grid(x + 1, y + 1))) {
@@ -631,7 +656,7 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     //                                     Vec2(x - 0.6, y - 1), Vec2(x - 0.6, y + 1)));
     //         }
 
-    //         if (isBottomVertex(c)) {
+    //         if (is_bot_vertex(c)) {
     //             //   |
     //             // -'
     //             if (isSolidHLine(grid(x - 1, y)) && isSolidVLine(grid(x + 1, y - 1))) {

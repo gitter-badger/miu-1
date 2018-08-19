@@ -25,7 +25,7 @@ pub struct Path {
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl Path {
-    pub fn new(a: V2, b: V2) -> Path {
+    pub fn straight(a: V2, b: V2) -> Path {
         Path { a, b, c: None, d: None, dashed: false }
     }
 

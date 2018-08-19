@@ -155,8 +155,8 @@ impl AddAssign<Offset> for V2Elt {
     }
 }
 
-/// I don't really like this implementation but I'm trying to stick to
-/// Markdeep's logic closely, so shit is what it is...
+// I don't really like this implementation but I'm trying to stick to
+// Markdeep's logic closely, so shit is what it is...
 impl Sub<Offset> for V2Elt {
     type Output = V2Elt;
     fn sub(self, x: Offset) -> Self::Output {
