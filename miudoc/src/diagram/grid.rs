@@ -1,16 +1,16 @@
-/// TODO: Everything is marked as pub for now but that should be changed later.
+// TODO: Everything is marked as pub for now but that should be changed later.
 
-use diagram::v2::*;
 use diagram::path::*;
 use diagram::primitives::*;
+use diagram::v2::*;
 
 use fnv::FnvHashMap;
 use unicode_width::UnicodeWidthChar;
 use unicode_width::UnicodeWidthStr;
 
+use std::cell::RefCell;
 use std::cmp::max;
 use std::convert::TryInto;
-use std::cell::RefCell;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Newtype wrapper for denoting character widths in integer multiples.
@@ -44,8 +44,8 @@ pub struct Grid {
     /// NOTE: Proper operation relies on not providing a way to mutate `data`.
     pos_cache: RefCell<PosCache>,
 
-    /// Yes, I recognize this is quite wasteful but we don't really expect
-    /// people to make humongous diagrams, so it should be okay...
+    // Yes, I recognize this is wasteful but we don't really expect
+    // people to make humongous diagrams, so it should be okay...
     used: Vec<bool>,
 }
 
@@ -320,6 +320,7 @@ impl<'a> From<&'a str> for Grid {
     }
 }
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 // Does the line from a to b contain at least one c?
 fn line_contains(g: &Grid, a: V2, b: V2, c: char) -> bool {
     let d = b - a.into();
@@ -338,6 +339,7 @@ fn line_contains(g: &Grid, a: V2, b: V2, c: char) -> bool {
     g.at(D2{x, y}.force_into()) == Some(c)
 }
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     // Find all solid vertical lines. Iterate horizontally
     // so that we never hit the same line twice
