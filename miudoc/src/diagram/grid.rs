@@ -342,6 +342,7 @@ fn line_contains(g: &Grid, a: V2, b: V2, c: char) -> bool {
     g.at(D2{x, y}.force_into()) == Some(c)
 }
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
     // [MM] Find all solid vertical lines. Iterate horizontally
     // so that we never hit the same line twice
@@ -409,9 +410,9 @@ fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
             //      _  _
             //    -'    '-
             else if g.at_faux(cur) == '\''
-                && ((g.at_faux(cur.lf()) == '-'
-                    && g.at_faux(cur.up().rt()) == '_'
-                    && !is_solid_vline_or_jump_or_point(g.at_faux(cur.up().lf())))
+                && (   (g.at_faux(cur.lf()) == '-'
+                        && g.at_faux(cur.up().rt()) == '_'
+                        && !is_solid_vline_or_jump_or_point(g.at_faux(cur.up().lf())))
                     || (g.at_faux(cur.up().lf()) == '_'
                         && g.at_faux(cur.rt()) == '-'
                         && !is_solid_vline_or_jump_or_point(g.at_faux(cur.up().rt()))))
@@ -423,9 +424,9 @@ fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
             }
             // [MM]   _.-  -._
             else if g.at_faux(cur) == '.'
-                && ((g.at_faux(cur.lf()) == '_'
-                    && g.at_faux(cur.rt()) == '-'
-                    && !is_solid_vline_or_jump_or_point(g.at_faux(cur.dn().rt())))
+                && (   (g.at_faux(cur.lf()) == '_'
+                        && g.at_faux(cur.rt()) == '-'
+                        && !is_solid_vline_or_jump_or_point(g.at_faux(cur.dn().rt())))
                     || (g.at_faux(cur.lf()) == '-'
                         && g.at_faux(cur.rt()) == '_'
                         && !is_solid_vline_or_jump_or_point(g.at_faux(cur.dn().lf()))))
@@ -439,6 +440,7 @@ fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
     }
 }
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
     for y in 0..g.height() {
         for mut x in 0..g.width() {
@@ -457,20 +459,20 @@ fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
 
                 // [MM] Detect curves and shorten the edge
                 if !is_vertex(g.at_faux(a.lf()))
-                    && ((is_top_vertex(g.at_faux(a))
-                         && is_solid_vline_or_jump_or_point(g.at_faux(a.dn().lf())))
-                        ||
-                        (is_bot_vertex(g.at_faux(a))
-                         && is_solid_vline_or_jump_or_point(g.at_faux(a.up().lf())))) {
+                    && (   (is_top_vertex(g.at_faux(a))
+                            && is_solid_vline_or_jump_or_point(g.at_faux(a.dn().lf())))
+                        || (is_bot_vertex(g.at_faux(a))
+                            && is_solid_vline_or_jump_or_point(g.at_faux(a.up().lf()))))
+                {
                     a = a.rt();
                 }
 
                 if !is_vertex(g.at_faux(b.rt()))
-                    && ((is_top_vertex(g.at_faux(b))
-                         && is_solid_vline_or_jump_or_point(g.at_faux(b.dn().rt())))
-                        ||
-                        (is_bot_vertex(g.at_faux(b))
-                         && is_solid_vline_or_jump_or_point(g.at_faux(b.up().rt())))) {
+                    && (   (is_top_vertex(g.at_faux(b))
+                            && is_solid_vline_or_jump_or_point(g.at_faux(b.dn().rt())))
+                        || (is_bot_vertex(g.at_faux(b))
+                            && is_solid_vline_or_jump_or_point(g.at_faux(b.up().rt()))))
+                {
                     b = b.lf();
                 }
 
@@ -485,10 +487,7 @@ fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-fn find_paths(g: &mut Grid, ps: &mut PathSet) {
-    find_solid_vlines(g, ps);
-
-    find_solid_hlines(g, ps);
+fn find_solid_backdiag(g: &mut Grid, ps: &mut PathSet) {
     // // Find all solid left-to-right downward diagonal lines (BACK DIAGONAL)
     // for (var i = -grid.height; i < grid.width; ++i) {
     //     for (var x = i, y = 0; y < grid.height; ++y, ++x) {
@@ -552,8 +551,10 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     //         }
     //     }
     // } // i
+}
 
-
+#[cfg_attr(rustfmt, rustfmt_skip)]
+fn find_solid_diagonal(g: &mut Grid, ps: &mut PathSet) {
     // // Find all solid left-to-right upward diagonal lines (DIAGONAL)
     // for (var i = -grid.height; i < grid.width; ++i) {
     //     for (var x = i, y = grid.height - 1; y >= 0; --y, ++x) {
@@ -622,8 +623,9 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     //         }
     //     }
     // } // y
+}
 
-
+fn find_curved_corners(g: &mut Grid, ps: &mut PathSet) {
     // // Now look for curved corners. The syntax constraints require
     // // that these can always be identified by looking at three
     // // horizontally-adjacent characters.
@@ -687,7 +689,9 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
 
     //     } // for x
     // } // for y
+}
 
+fn find_low_horizontal_lines(g: &mut Grid, ps: &mut PathSet) {
     // // Find low horizontal lines marked with underscores. These
     // // are so simple compared to the other cases that we process
     // // them directly here without a helper function. Process these
@@ -763,4 +767,19 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     //         }
     //     } // for x
     // } // for y
-} // findPaths
+}
+
+#[cfg_attr(rustfmt, rustfmt_skip)]
+fn find_paths(g: &mut Grid, ps: &mut PathSet) {
+    find_solid_vlines(g, ps);
+
+    find_solid_hlines(g, ps);
+
+    find_solid_backdiag(g, ps);
+
+    find_solid_diagonal(g, ps);
+
+    find_curved_corners(g, ps);
+
+    find_low_horizontal_lines(g, ps);
+}

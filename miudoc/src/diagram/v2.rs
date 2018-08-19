@@ -212,6 +212,10 @@ pub struct D2Elt {
     offset: Offset,
 }
 
+impl D2Elt {
+    pub const ZERO: D2Elt = D2Elt { base: 0, offset: Offset::ZERO };
+}
+
 //----------------------------------------------------------
 // Conversions
 
@@ -227,13 +231,22 @@ impl From<V2Elt> for D2Elt {
 //----------------------------------------------------------
 // Arithmetic operations
 
+impl Add for D2Elt {
+    type Output = D2Elt;
+    fn add(self, d: D2Elt) -> D2Elt {
+        let v = self.offset + d.offset;
+        D2Elt {
+            offset: v.offset,
+            base: self.base.checked_add(d.base).unwrap()
+                .checked_add(v.base as D2EltBase).unwrap()
+        }
+    }
+}
+
 impl AddAssign for D2Elt {
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn add_assign(&mut self, d: D2Elt) {
-        let v = self.offset + d.offset;
-        self.offset = v.offset;
-        self.base = self.base.checked_add(d.base).unwrap()
-            .checked_add(v.base as D2EltBase).unwrap();
+        *self = *self + d;
     }
 }
 
@@ -366,6 +379,7 @@ pub struct D2 {
 }
 
 impl D2 {
+    pub const ZERO: D2 = D2{x: D2Elt::ZERO, y: D2Elt::ZERO};
     pub fn force_into(self) -> V2 {
         V2::try_from(self).unwrap()
     }
@@ -379,6 +393,19 @@ impl From<V2> for D2 {
         D2 {
             x: v.x.into(),
             y: v.y.into(),
+        }
+    }
+}
+
+//----------------------------------------------------------
+// Arithmetic operations
+
+impl Add for D2 {
+    type Output = D2;
+    fn add(self, d: D2) -> D2 {
+        D2 {
+            x: self.x + d.x,
+            y: self.y + d.y,
         }
     }
 }

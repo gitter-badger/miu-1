@@ -41,7 +41,7 @@ impl Path {
         let d = self.b - D2::from(self.a);
         // Don't use EPSILON because we have proper types, not just number.
         // ((d.y + d.x) as f64) < EPSILON
-        d.x == d.y
+        d.x + d.y == D2Elt::ZERO
     }
 
     pub fn is_backdiag(&self) -> bool {
