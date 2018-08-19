@@ -11,6 +11,9 @@ Prerequisites
 3. Python3 (glue, you probably already have it)
 4. `rst2pdf <https://github.com/rst2pdf/rst2pdf#installation-and-use>`_ (docs, optional)
 
+If you're having trouble installing any of these, please feel free to ask for
+help on the issue tracker (that reminds me: I should set up some IM thingy...).
+
 Build instructions
 ==================
 
