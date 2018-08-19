@@ -16,3 +16,4 @@ path = "src/main.rs"
 # TODO: Put proper versions here...
 regex = "*"
 unicode-width = "*"
+fnv = "*"

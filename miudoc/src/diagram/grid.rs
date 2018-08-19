@@ -4,13 +4,15 @@ use diagram::v2::*;
 use diagram::path::*;
 use diagram::primitives::*;
 
+use fnv::FnvHashMap;
 use unicode_width::UnicodeWidthChar;
 use unicode_width::UnicodeWidthStr;
 
 use std::cmp::max;
 use std::convert::TryInto;
+use std::cell::RefCell;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Newtype wrapper for denoting character widths in integer multiples.
 pub struct MonoWidth(usize);
 
@@ -21,6 +23,8 @@ impl MonoWidth {
     }
 }
 
+type PosCache = FnvHashMap<(usize, usize), (CharMatch, char)>;
+
 /// A Grid is an "unparsed" diagram -- it has characters but doesn't recognize
 /// shapes in the diagram by itself.
 #[derive(Debug)]
@@ -28,10 +32,18 @@ pub struct Grid {
     /// Width according to a monospace font. This may or may not match the
     /// length of any String in data.
     width: MonoWidth,
+
     height: usize,
+
     // TODO: Explain why we're using String here instead of [char] or
     // something else
     data: Vec<String>,
+
+    /// Avoid going through data every time to get a character at a certain
+    /// position.
+    /// NOTE: Proper operation relies on not providing a way to mutate `data`.
+    pos_cache: RefCell<PosCache>,
+
     /// Yes, I recognize this is quite wasteful but we don't really expect
     /// people to make humongous diagrams, so it should be okay...
     used: Vec<bool>,
@@ -45,7 +57,7 @@ pub struct Grid {
 /// So when we are asked for "the character" (1-M wide) at a position (x, y),
 /// the location may correspond to either the left or right of a 2-M wide char
 /// or to a 1-M wide char.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum CharMatch {
     Left,
     Exact,
@@ -94,31 +106,31 @@ impl Grid {
     /// `0 <= x < 10` and `y == 0`.
     /// Note that in the presence of zero-width characters, it may happen that
     /// the returned char doesn't fully incorporate what will be displayed.
-    ///
-    /// TODO: The current implementation is extremely stupid because it scans
-    /// the line every time. We should cache results (because the grid is
-    /// immutable).
     pub fn at_precise<T: IsV2>(&self, v: T) -> (CharMatch, char) {
         let vv = v.to_v2();
         let x = vv.x.round();
         let y = vv.y.round();
-        assert!(y < self.height);
-        assert!(MonoWidth(x) < self.width);
-        let mut tmp = 0;
-        for c in self.data[y].chars() {
-            let sz = match UnicodeWidthChar::width(c) {
-                Some(a) => a,
-                None => 0,
-            };
-            match sz {
-                1 if (x == tmp)     => { return (CharMatch::Exact, c); }
-                2 if (x == tmp)     => { return (CharMatch::Left , c); }
-                2 if (x == tmp + 1) => { return (CharMatch::Right, c); }
-                // 0 => (),
-                _ => { tmp += sz; }
-            }
-        }
-        unreachable!();
+        let mut cache = self.pos_cache.borrow_mut();
+        cache.entry((x, y))
+            .or_insert_with(|| {
+                assert!(y < self.height);
+                assert!(MonoWidth(x) < self.width);
+                let mut tmp = 0;
+                for c in self.data[y].chars() {
+                    let sz = match UnicodeWidthChar::width(c) {
+                        Some(a) => a,
+                        None => 0,
+                    };
+                    match sz {
+                        1 if (x == tmp)     => { return (CharMatch::Exact, c); }
+                        2 if (x == tmp)     => { return (CharMatch::Left , c); }
+                        2 if (x == tmp + 1) => { return (CharMatch::Right, c); }
+                        // 0 => (),
+                        _ => { tmp += sz; }
+                    }
+                }
+                unreachable!();
+            }).clone()
     }
 
     pub fn is_used<T: IsV2>(&self, vv: T) -> bool {
@@ -304,7 +316,7 @@ impl<'a> From<&'a str> for Grid {
             }
         }
         let used = vec![false; height * final_width];
-        Grid {width, height, data, used}
+        Grid {width, height, data, pos_cache: RefCell::new(PosCache::default()), used}
     }
 }
 
