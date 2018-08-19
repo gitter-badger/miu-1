@@ -29,6 +29,10 @@ impl Path {
         Path { a, b, c: None, d: None, dashed: false }
     }
 
+    pub fn curved(a: V2, b: V2, c: V2, d: V2) -> Path {
+        Path { a, b, c: Some(c), d: Some(d), dashed: false }
+    }
+
     pub fn is_vertical(&self) -> bool {
         self.b.x == self.a.x
     }

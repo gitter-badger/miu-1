@@ -28,6 +28,12 @@ impl Offset {
     pub fn get(&self) -> u8 {
         self.o
     }
+
+    pub fn ratio(n: u8, d: u8) -> Offset {
+        let DIVS = Offset::DIVS;
+        assert!(0 < n && n < d && d <= DIVS && DIVS % d == 0);
+        Offset {o: DIVS/d * n}
+    }
 }
 
 //----------------------------------------------------------

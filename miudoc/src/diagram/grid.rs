@@ -660,70 +660,99 @@ fn find_solid_dlines(g: &mut Grid, ps: &mut PathSet) {
     }
 }
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 fn find_curved_corners(g: &mut Grid, ps: &mut PathSet) {
-    // // Now look for curved corners. The syntax constraints require
-    // // that these can always be identified by looking at three
-    // // horizontally-adjacent characters.
-    // for (var y = 0; y < grid.height; ++y) {
-    //     for (var x = 0; x < grid.width; ++x) {
-    //         let c = g.at_faux(x, y);
+    // [MM] Now look for curved corners. The syntax constraints require
+    // that these can always be identified by looking at three
+    // horizontally-adjacent characters.
+    for y in 0 .. g.height() {
+        for x in 0 .. g.width() {
+            let v = (x, y).to_v2();
 
-    //         // Note that because of undirected vertices, the
-    //         // following cases are not exclusive
-    //         if (is_top_vertex(c)) {
-    //             // -.
-    //             //   |
-    //             if (is_solid_hline(g.at_faux(x - 1, y)) && is_solid_vline(g.at_faux(x + 1, y + 1))) {
-    //                 grid.set_used(x - 1, y); grid.set_used(x, y); grid.set_used(x + 1, y + 1);
-    //                 pathSet.insert(new Path(Vec2(x - 1, y), Vec2(x + 1, y + 1),
-    //                                         Vec2(x + 1.1, y), Vec2(x + 1, y + 1)));
-    //             }
+            let up_lf = g.at_faux(v.up().lf());
+            let up    = g.at_faux(v.up());
+            let up_rt = g.at_faux(v.up().rt());
+            let lf    = g.at_faux(v.lf());
+            let c     = g.at_faux(v);
+            let rt    = g.at_faux(v.rt());
+            let dn_lf = g.at_faux(v.dn().lf());
+            let dn    = g.at_faux(v.dn());
+            let dn_rt = g.at_faux(v.dn().rt());
 
-    //             //  .-
-    //             // |
-    //             if (is_solid_hline(g.at_faux(x + 1, y)) && is_solid_vline(g.at_faux(x - 1, y + 1))) {
-    //                 grid.set_used(x - 1, y + 1); grid.set_used(x, y); grid.set_used(x + 1, y);
-    //                 pathSet.insert(new Path(Vec2(x + 1, y), Vec2(x - 1, y + 1),
-    //                                         Vec2(x - 1.1, y), Vec2(x - 1, y + 1)));
-    //             }
-    //         }
+            // [MM] Note that because of undirected vertices, the
+            // following cases are not exclusive
+            if (is_top_vertex(c)) {
+                // [MM] -.
+                //        |
+                if is_solid_hline(lf) && is_solid_vline(dn_rt) {
+                    g.set_used(v.lf());
+                    g.set_used(v);
+                    g.set_used(v.dn().rt());
+                    let c_pt = (x.to_v2elt() + Offset::ratio(1, 10), y.to_v2elt()).to_v2();
+                    let d_pt = v.dn().rt();
+                    ps.insert(Path::curved(v.lf(), v.dn().rt(), c_pt, d_pt));
+                }
 
-    //         // Special case patterns:
-    //         //   .  .   .  .
-    //         //  (  o     )  o
-    //         //   '  .   '  '
-    //         if (((c == ')') || is_point(c)) && (g.at_faux(x - 1, y - 1) == '.') && (g.at_faux(x - 1, y + 1) == "\'")) {
-    //             grid.set_used(x, y); grid.set_used(x - 1, y - 1); grid.set_used(x - 1, y + 1);
-    //             pathSet.insert(new Path(Vec2(x - 2, y - 1), Vec2(x - 2, y + 1),
-    //                                     Vec2(x + 0.6, y - 1), Vec2(x + 0.6, y + 1)));
-    //         }
+                // [MM]  .-
+                //      |
+                if is_solid_hline(rt) && is_solid_vline(dn_lf) {
+                    g.set_used(v.dn().lf());
+                    g.set_used(v);
+                    g.set_used(v.rt());
+                    let c_pt = (x.to_v2elt() - Offset::ratio(1, 10), y.to_v2elt()).to_v2();
+                    let d_pt = v.dn().lf();
+                    ps.insert(Path::curved(v.rt(), v.dn().lf(), c_pt, d_pt));
+                }
+            }
 
-    //         if (((c == '(') || is_point(c)) && (g.at_faux(x + 1, y - 1) == '.') && (g.at_faux(x + 1, y + 1) == "\'")) {
-    //             grid.set_used(x, y); grid.set_used(x + 1, y - 1); grid.set_used(x + 1, y + 1);
-    //             pathSet.insert(new Path(Vec2(x + 2, y - 1), Vec2(x + 2, y + 1),
-    //                                     Vec2(x - 0.6, y - 1), Vec2(x - 0.6, y + 1)));
-    //         }
+            // [MM] Special case patterns:
+            //   .  .   .  .
+            //  (  o     )  o
+            //   '  .   '  '
+            if (c == ')' || is_point(c)) && up_lf == '.' && dn_lf == '\'' {
+                g.set_used(v);
+                g.set_used(v.up().lf());
+                g.set_used(v.dn().lf());
+                let c_pt = (x.to_v2elt() + Offset::ratio(6, 10), (y - 1).to_v2elt()).to_v2();
+                let d_pt = (x.to_v2elt() + Offset::ratio(6, 10), (y + 1).to_v2elt()).to_v2();
+                ps.insert(Path::curved(v.up().lf_n(2), v.dn().lf_n(2), c_pt, d_pt));
+            }
 
-    //         if (is_bot_vertex(c)) {
-    //             //   |
-    //             // -'
-    //             if (is_solid_hline(g.at_faux(x - 1, y)) && is_solid_vline(g.at_faux(x + 1, y - 1))) {
-    //                 grid.set_used(x - 1, y); grid.set_used(x, y); grid.set_used(x + 1, y - 1);
-    //                 pathSet.insert(new Path(Vec2(x - 1, y), Vec2(x + 1, y - 1),
-    //                                         Vec2(x + 1.1, y), Vec2(x + 1, y - 1)));
-    //             }
+            if (c == '(' || is_point(c)) && up_rt == '.' && dn_rt == '\'' {
+                g.set_used(v);
+                g.set_used(v.up().rt());
+                g.set_used(v.dn().rt());
+                let c_pt = (x.to_v2elt() - Offset::ratio(6, 10), (y - 1).to_v2elt()).to_v2();
+                let d_pt = (x.to_v2elt() - Offset::ratio(6, 10), (y + 1).to_v2elt()).to_v2();
+                ps.insert(Path::curved(v.up().rt_n(2), v.dn().rt_n(2), c_pt, d_pt));
+            }
 
-    //             // |
-    //             //  '-
-    //             if (is_solid_hline(g.at_faux(x + 1, y)) && is_solid_vline(g.at_faux(x - 1, y - 1))) {
-    //                 grid.set_used(x - 1, y - 1); grid.set_used(x, y); grid.set_used(x + 1, y);
-    //                 pathSet.insert(new Path(Vec2(x + 1, y), Vec2(x - 1, y - 1),
-    //                                         Vec2(x - 1.1, y), Vec2(x - 1, y - 1)));
-    //             }
-    //         }
+            if is_bot_vertex(c) {
+                // [MM]   |
+                //      -'
+                if is_solid_hline(lf) && is_solid_vline(up_rt) {
+                    g.set_used(v.lf());
+                    g.set_used(v);
+                    // TODO: The next line seems buggy.
+                    g.set_used(v.up().rt());
+                    let c_pt = (x.to_v2elt() + Offset::ratio(1, 10), y.to_v2elt()).to_v2();
+                    let d_pt = v.up().rt();
+                    ps.insert(Path::curved(v.lf(), v.up().rt(), c_pt, d_pt));
+                }
 
-    //     } // for x
-    // } // for y
+                // [MM] |
+                //       '-
+                if is_solid_hline(rt) && is_solid_vline(up_lf) {
+                    g.set_used(v.up().lf());
+                    g.set_used(v);
+                    g.set_used(v.rt());
+                    let c_pt = (x.to_v2elt() - Offset::ratio(1, 10), y.to_v2elt()).to_v2();
+                    let d_pt = v.up().lf();
+                    ps.insert(Path::curved(v.rt(), v.up().lf(), c_pt, d_pt));
+                }
+            }
+        }
+    }
 }
 
 fn find_low_horizontal_lines(g: &mut Grid, ps: &mut PathSet) {
