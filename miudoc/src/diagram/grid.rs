@@ -670,18 +670,16 @@ fn find_curved_corners(g: &mut Grid, ps: &mut PathSet) {
             let v = (x, y).to_v2();
 
             let up_lf = g.at_faux(v.up().lf());
-            let up    = g.at_faux(v.up());
             let up_rt = g.at_faux(v.up().rt());
             let lf    = g.at_faux(v.lf());
             let c     = g.at_faux(v);
             let rt    = g.at_faux(v.rt());
             let dn_lf = g.at_faux(v.dn().lf());
-            let dn    = g.at_faux(v.dn());
             let dn_rt = g.at_faux(v.dn().rt());
 
             // [MM] Note that because of undirected vertices, the
             // following cases are not exclusive
-            if (is_top_vertex(c)) {
+            if is_top_vertex(c) {
                 // [MM] -.
                 //        |
                 if is_solid_hline(lf) && is_solid_vline(dn_rt) {
@@ -733,7 +731,6 @@ fn find_curved_corners(g: &mut Grid, ps: &mut PathSet) {
                 if is_solid_hline(lf) && is_solid_vline(up_rt) {
                     g.set_used(v.lf());
                     g.set_used(v);
-                    // TODO: The next line seems buggy.
                     g.set_used(v.up().rt());
                     let c_pt = (x.to_v2elt() + Offset::ratio(1, 10), y.to_v2elt()).to_v2();
                     let d_pt = v.up().rt();
@@ -756,81 +753,92 @@ fn find_curved_corners(g: &mut Grid, ps: &mut PathSet) {
 }
 
 fn find_low_horizontal_lines(g: &mut Grid, ps: &mut PathSet) {
-    // // Find low horizontal lines marked with underscores. These
-    // // are so simple compared to the other cases that we process
-    // // them directly here without a helper function. Process these
-    // // from top to bottom and left to right so that we can read
-    // // them in a single sweep.
-    // //
-    // // Exclude the special case of double underscores going right
-    // // into an ASCII character, which could be a source code
-    // // identifier such as __FILE__ embedded in the diagram.
-    // for (var y = 0; y < grid.height; ++y) {
-    //     for (var x = 0; x < grid.width - 2; ++x) {
-    //         let lt = g.at_faux(x - 1, y);
+    // [MM] Find low horizontal lines marked with underscores. These
+    // are so simple compared to the other cases that we process
+    // them directly here without a helper function. Process these
+    // from top to bottom and left to right so that we can read
+    // them in a single sweep.
+    //
+    // Exclude the special case of double underscores going right
+    // into an ASCII character, which could be a source code
+    // identifier such as __FILE__ embedded in the diagram.
+    for y in 0 .. g.height() {
+        for mut x in 2 .. g.width() - 2 {
+            let v = (x, y).to_v2();
 
-    //         if ((g.at_faux(x, y) == '_') && (g.at_faux(x + 1, y) == '_') &&
-    //             (! isASCIILetter(g.at_faux(x + 2, y)) || (lt == '_')) &&
-    //             (! isASCIILetter(lt) || (g.at_faux(x + 2, y) == '_'))) {
+            let up_lf = g.at_faux(v.up().lf());
+            let up    = g.at_faux(v.up());
+            let lf_lf = g.at_faux(v.lf_n(2));
+            let lf    = g.at_faux(v.lf());
+            let c     = g.at_faux(v);
+            let rt    = g.at_faux(v.rt());
+            let rt_rt = g.at_faux(v.rt_n(2));
+            let dn_lf = g.at_faux(v.dn().lf());
+            let dn    = g.at_faux(v.dn());
 
-    //             let ltlt = g.at_faux(x - 2, y);
-    //             let A = Vec2(x - Offset::HALF, y + Offset::HALF);
+            if c == '_' && rt == '_'
+                && (!rt_rt.is_ascii() || lf == '_')
+                && (!lf.is_ascii() || rt_rt == '_') {
 
-    //             if ((lt == '|') || (g.at_faux(x - 1, y + 1) == '|') ||
-    //                 (lt == '.') || (g.at_faux(x - 1, y + 1) == "'")) {
-    //                 // Extend to meet adjacent vertical
-    //                 A.x -= Offset::HALF;
+                let mut a = (x.to_v2elt() - Offset::HALF, y.to_v2elt() + Offset::HALF).to_v2();
 
-    //                 // Very special case of overrunning into the side of a curve,
-    //                 // needed for logic gate diagrams
-    //                 if ((lt == '.') &&
-    //                     ((ltlt == '-') ||
-    //                      (ltlt == '.')) &&
-    //                     (g.at_faux(x - 2, y + 1) == '(')) {
-    //                     A.x -= Offset::HALF;
-    //                 }
-    //             } else if (lt == '/') {
-    //                 A.x -= 1.0;
-    //             }
+                if lf == '|' || dn_lf == '|' || lf == '.' || dn_lf == '\'' {
+                    // [MM] Extend to meet adjacent vertical
+                    a.x -= Offset::HALF;
 
-    //             // Detect overrun of a tight double curve
-    //             if ((lt == '(') && (ltlt == '(') &&
-    //                 (g.at_faux(x, y + 1) == "'") && (g.at_faux(x, y - 1) == '.')) {
-    //                 A.x += Offset::HALF;
-    //             }
-    //             lt = ltlt = undefined;
+                    // [MM] Very special case of overrunning into the side of a curve,
+                    // needed for logic gate diagrams
+                    if lf == '.'
+                        && (lf_lf == '-' || lf_lf == '.')
+                        && g.at_faux(v.dn().lf_n(2)) == '(' {
+                        a.x -= Offset::HALF;
+                    }
+                } else if lf == '/' {
+                    a.x = (a.x - 1.to_v2elt()).try_into().unwrap();
+                }
 
-    //             do { grid.set_used(x, y); ++x; } while (g.at_faux(x, y) == '_');
+                // Detect overrun of a tight double curve
+                if lf == '(' && lf_lf == '(' && dn == '\'' && up == '.' {
+                    a.x += Offset::HALF;
+                }
+                // lf = lf_lf = undefined;
 
-    //             let B = Vec2(x - Offset::HALF, y + Offset::HALF);
-    //             let c = g.at_faux(x, y);
-    //             let rt = g.at_faux(x + 1, y);
-    //             let dn = g.at_faux(x, y + 1);
+                // Desugared do-while loop
+                g.set_used((x, y));
+                x += 1;
+                while g.at_faux((x, y)) == '_' {
+                    g.set_used((x, y));
+                    x += 1;
+                }
 
-    //             if ((c == '|') || (dn == '|') || (c == '.') || (dn == "'")) {
-    //                 // Extend to meet adjacent vertical
-    //                 B.x += Offset::HALF;
+                let v = (x, y).to_v2();
+                let mut b = (v.x - Offset::HALF, v.y + Offset::HALF).to_v2();
+                let rt = g.at_faux(v.rt());
+                let c = g.at_faux(v);
+                let dn = g.at_faux(v.dn());
+                let dn_rt = g.at_faux(v.dn().rt());
 
-    //                 // Very special case of overrunning into the side of a curve,
-    //                 // needed for logic gate diagrams
-    //                 if ((c == '.') &&
-    //                     ((rt == '-') || (rt == '.')) &&
-    //                     (g.at_faux(x + 1, y + 1) == ')')) {
-    //                     B.x += Offset::HALF;
-    //                 }
-    //             } else if ((c == '\\')) {
-    //                 B.x += 1.0;
-    //             }
+                if c == '|' || dn == '|' || c == '.' || dn == '\'' {
+                    // [MM] Extend to meet adjacent vertical
+                    b.x += Offset::HALF;
 
-    //             // Detect overrun of a tight double curve
-    //             if ((c == ')') && (rt == ')') && (g.at_faux(x - 1, y + 1) == "'") && (g.at_faux(x - 1, y - 1) == '.')) {
-    //                 B.x += -Offset::HALF;
-    //             }
+                    // [MM] Very special case of overrunning into the side of a curve,
+                    // needed for logic gate diagrams
+                    if c == '.' && (rt == '-' || rt == '.') && dn_rt == ')' {
+                        b.x += Offset::HALF;
+                    }
+                } else if c == '\\' {
+                    b.x = (b.x + 1.to_v2elt()).try_into().unwrap();
+                }
 
-    //             pathSet.insert(new Path(A, B));
-    //         }
-    //     } // for x
-    // } // for y
+                // [MM] Detect overrun of a tight double curve
+                if c == ')' && rt == ')' && dn_lf == '\'' && up_lf == '.' {
+                    b.x -= Offset::HALF;
+                }
+                ps.insert(Path::straight(a, b));
+            }
+        }
+    }
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
