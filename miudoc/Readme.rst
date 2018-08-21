@@ -85,7 +85,7 @@ The following Unicode scalars are not allowed:
 
 * Private use area: U+E004, U+F8FF
 
-For the rest, try and see if things break 😅.
+For the rest, try and see what things break 😅.
 
 ============================================================================
 

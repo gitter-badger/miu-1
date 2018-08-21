@@ -24,10 +24,15 @@ operator (>*-) =
     opname = "rightwards splat discard"
   }
 
-module Class.Applicative where
+module Applicative where
 
+-- This lawless type should probably be hidden inside another module?
+-- Otherwise, in some cases, type inference will end up generating
+-- foo : (Pointed f, Apply f) => .. for some local function, which isn't good..
+-- We probably don't even need this if we're using profunctor optics.
+-- See http://oleg.fi/gists/posts/2017-03-20-affine-traversal.html#s:1
 mod type Pointed f where
-  --| Lift a value.
+  -- | Lift a value.
   pure : a -> f a
 
 mod type Apply f where
@@ -37,7 +42,7 @@ mod type Apply f where
 
   --| Right to left sequential application.
   (<*<) : f (a -> b) -> f a -> f b
-  (<*<) = liftA2 id
+  (<*<) = liftA2 identity
 
   -- Q: Does this introduce an additional
   -- liftA2 : (M : Apply f) => ... in the outer scope?
@@ -55,13 +60,13 @@ implicit type Applicative f where
 implicit ApplicativeMaybe = MonadMaybe : Applicative Maybe
 
 -- | Left to right sequential application.
-(>*>) : M : Apply f => f a -> f (a -> b) -> f b
+(>*>) : (M : Apply f) => f a -> f (a -> b) -> f b
 (>*>) = flip M.(<*<)
 
 -- | Sequence actions from left to right, discarding the left argument.
-(-*>) : M : Apply f => f a -> f b -> f b
+(-*>) : (M : Apply f) => f a -> f b -> f b
 (-*>) = M.liftA2 (flip const)
 
 -- | Sequence actions from left to right, discarding the right argument.
-(>*-) : M : Apply f => f a -> f b -> f a
+(>*-) : (M : Apply f) => f a -> f b -> f a
 (>*-) = M.liftA2 const

@@ -202,6 +202,7 @@ literals::
     class instance
     functor comptime tailcall
     throw catch except
+    pat
 
   token backslash-op = "\\"
 
