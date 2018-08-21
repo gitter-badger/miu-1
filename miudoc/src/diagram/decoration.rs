@@ -3,6 +3,39 @@ use diagram::primitives::*;
 use std::iter;
 use std::slice;
 
+//------------------------------------------------------------------------------
+// Angles
+
+/// Angles in degrees.
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct Angle {
+    a: u16,
+}
+
+// TODO: A lot of the code in here is shared with v2::Offset.
+// Once const generics land, see if we can use a common modular type.
+impl Angle {
+    pub const DIVS: u16 = 360;
+    pub const MAX: Angle = Angle { a: 359 };
+    pub const ZERO: Angle = Angle { a: 0 };
+    pub const A90: Angle = Angle { a: 90 };
+    pub const A180: Angle = Angle { a: 180 };
+    pub const A270: Angle = Angle { a: 270 };
+
+    pub fn get(&self) -> u16 {
+        self.a
+    }
+
+    pub fn ratio(n: u16, d: u16) -> Angle {
+        let DIVS = Angle::DIVS;
+        assert!(0 < n && n < d && d <= DIVS && DIVS % d == 0);
+        Angle {a: DIVS/d * n}
+    }
+}
+
+//------------------------------------------------------------------------------
+// Decorations
+
 #[derive(Debug, Hash, PartialEq, Eq)]
 /// TODO: Replace this placeholder definition with something sensible.
 pub struct Decoration {
@@ -24,6 +57,9 @@ impl Decoration {
         self.type_
     }
 }
+
+//------------------------------------------------------------------------------
+// Decoration sets
 
 pub struct DecorationSet {
     arrows: Vec<Decoration>,
