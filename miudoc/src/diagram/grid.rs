@@ -2,10 +2,10 @@
 // NOTE: Comments marked with [MM] have bee directly copied from Markdeep's source
 // code (written by Morgan McGuire).
 
+use super::decoration::*;
 use super::path::*;
 use super::primitives::*;
 use super::v2::*;
-use super::decoration::*;
 
 use fnv::FnvHashMap;
 use unicode_width::UnicodeWidthChar;
@@ -852,6 +852,7 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     find_low_horizontal_lines(g, ps);
 }
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 fn find_decorations(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationSet) {
     // The name used in Markdeep for this function "isEmptyOrVertex" doesn't
     // seem appropriate because there is already a separate is_vertex function
@@ -968,38 +969,37 @@ fn find_decorations(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationSet) 
                             decors.insert((v.x, v.y - Offset::HALF, '>', Angle::A270));
                             g.set_used(v);
                         }
-                    }
-                    // } else if (c == 'v') {
-                    //     if (ps.dn_ends_at(x, y + 0.5)) {
-                    //         decors.insert((x, y + 0.5, '>', 90));
-                    //         g.set_used(x, y);
-                    //     } else if (ps.dn_ends_at(x, y)) {
-                    //         decors.insert((x, y, '>', 90));
-                    //         g.set_used(x, y);
-                    //     } else if (ps.diagonal_dn_ends_at(x, y)) {
-                    //         decors.insert((x, y, '>', 90 + Angle::DIAGONAL));
-                    //         g.set_used(x, y);
-                    //     } else if (ps.diagonal_dn_ends_at(x - 0.5, y + 0.5)) {
-                    //         decors.insert((x - 0.5, y + 0.5, '>', 90 + Angle::DIAGONAL));
-                    //         g.set_used(x, y);
-                    //     } else if (ps.diagonal_dn_ends_at(x - 0.25, y + 0.25)) {
-                    //         decors.insert((x - 0.25, y + 0.25, '>', 90 + Angle::DIAGONAL));
-                    //         g.set_used(x, y);
-                    //     } else if (ps.backdiag_dn_ends_at(x, y)) {
-                    //         decors.insert((x, y, '>', 90 - Angle::DIAGONAL));
-                    //         g.set_used(x, y);
-                    //     } else if (ps.backdiag_dn_ends_at(x + 0.5, y + 0.5)) {
-                    //         decors.insert((x + 0.5, y + 0.5, '>', 90 - Angle::DIAGONAL));
-                    //         g.set_used(x, y);
-                    //     } else if (ps.backdiag_dn_ends_at(x + 0.25, y + 0.25)) {
-                    //         decors.insert((x + 0.25, y + 0.25, '>', 90 - Angle::DIAGONAL));
-                    //         g.set_used(x, y);
-                    //     } else if (ps.vertical_passes_thru(x, y)) {
-                    //         // Only try this if all others failed
-                    //         decors.insert((x, y + 0.5, '>', 90));
-                    //         g.set_used(x, y);
-                    //     }
-                    // } // arrow heads
+                    } else if c == 'v' {
+                        if ps.dn_ends_at((v.x, v.y + Offset::HALF)) {
+                            decors.insert((v.x, v.y + Offset::HALF, '>', Angle::A90));
+                            g.set_used(v);
+                        } else if ps.dn_ends_at(v) {
+                            decors.insert((v.x, v.y, '>', Angle::A90));
+                            g.set_used(v);
+                        } else if ps.diagonal_dn_ends_at(v) {
+                            decors.insert((v.x, v.y, '>', Angle::A90 + Angle::DIAGONAL));
+                            g.set_used(v);
+                        } else if ps.diagonal_dn_ends_at((v.x - Offset::HALF, v.y + Offset::HALF)) {
+                            decors.insert((v.x - Offset::HALF, v.y + Offset::HALF, '>', Angle::A90 + Angle::DIAGONAL));
+                            g.set_used(v);
+                        } else if ps.diagonal_dn_ends_at((v.x - Offset::QUARTER, v.y + Offset::QUARTER)) {
+                            decors.insert((v.x - Offset::QUARTER, v.y + Offset::QUARTER, '>', Angle::A90 + Angle::DIAGONAL));
+                            g.set_used(v);
+                        } else if ps.backdiag_dn_ends_at(v) {
+                            decors.insert((v.x, v.y, '>', Angle::A90 - Angle::DIAGONAL));
+                            g.set_used(v);
+                        } else if ps.backdiag_dn_ends_at((v.x + Offset::HALF, v.y + Offset::HALF)) {
+                            decors.insert((v.x + Offset::HALF, v.y + Offset::HALF, '>', Angle::A90 - Angle::DIAGONAL));
+                            g.set_used(v);
+                        } else if ps.backdiag_dn_ends_at((v.x + Offset::QUARTER, v.y + Offset::QUARTER)) {
+                            decors.insert((v.x + Offset::QUARTER, v.y + Offset::QUARTER, '>', Angle::A90 - Angle::DIAGONAL));
+                            g.set_used(v);
+                        } else if ps.vertical_passes_thru(v) {
+                            // [MM] Only try this if all others failed
+                            decors.insert((v.x, v.y + Offset::HALF, '>', Angle::A90));
+                            g.set_used(v);
+                        }
+                    } // arrow heads
                 } // decoration type
             } // y
         } // x

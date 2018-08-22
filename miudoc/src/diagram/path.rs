@@ -99,7 +99,7 @@ impl Path {
            else { self.b == v }
     }
 
-    pub fn diagonal_down_ends_at<T: IsV2>(&self, v: T) -> bool {
+    pub fn diagonal_dn_ends_at<T: IsV2>(&self, v: T) -> bool {
         let v = v.to_v2();
         self.is_diagonal()
         && if self.b.y < self.a.y { self.a == v }
@@ -113,7 +113,7 @@ impl Path {
         else { self.b == v }
     }
 
-    pub fn backdiag_down_ends_at<T: IsV2>(&self, v: T) -> bool {
+    pub fn backdiag_dn_ends_at<T: IsV2>(&self, v: T) -> bool {
         let v = v.to_v2();
         self.is_backdiag() &&
         if self.b.y < self.a.y { self.a == v }
@@ -168,8 +168,14 @@ impl PathSet {
     pub fn diagonal_up_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
         self.iter().any(|p| p.diagonal_up_ends_at(v))
     }
+    pub fn diagonal_dn_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.diagonal_dn_ends_at(v))
+    }
     pub fn backdiag_up_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
         self.iter().any(|p| p.backdiag_up_ends_at(v))
+    }
+    pub fn backdiag_dn_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.backdiag_dn_ends_at(v))
     }
     pub fn horizontal_passes_thru<T: IsV2 + Copy>(&self, v: T) -> bool {
         self.iter().any(|p| p.horizontal_passes_thru(v))
