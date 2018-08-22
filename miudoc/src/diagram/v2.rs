@@ -279,8 +279,8 @@ impl Sub for D2Elt {
 // Test that narrowing doesn't happen unless forced.
 #[test]
 fn elt_base_bounds_check() {
-    assert!((D2EltBase::max as f64 - V2EltBase::max as f64).is_sign_positive());
-    assert!((D2EltBase::min as f64 - V2EltBase::min as f64).is_sign_negative());
+    assert!((D2EltBase::max_value() as f64 - V2EltBase::max_value() as f64).is_sign_positive());
+    assert!((D2EltBase::min_value() as f64 - V2EltBase::min_value() as f64).is_sign_negative());
 }
 
 //------------------------------------------------------------------------------
@@ -426,10 +426,7 @@ impl Add for D2 {
 //------------------------------------------------------------------------------
 // Conversion traits
 
-/// Trait equivalent to Into<V2Elt> because
-///
-///     pub trait IsV2Elt = Into<V2Elt>;
-///
+/// Trait equivalent to Into<V2Elt> because `pub trait IsV2Elt = Into<V2Elt>;`
 /// doesn't compile because trait aliases haven't been implemented yet.
 /// The trait method also has a more descriptive name.
 pub trait IsV2Elt {
@@ -461,10 +458,7 @@ impl IsV2Elt for V2Elt {
     }
 }
 
-/// Trait equivalent to Into<V2> because
-///
-///     pub trait IsV2 = Into<V2>;
-///
+/// Trait equivalent to Into<V2> because `pub trait IsV2 = Into<V2>;`
 /// doesn't compile because trait aliases haven't been implemented yet.
 /// The trait method also has a more descriptive name.
 pub trait IsV2 {
@@ -473,6 +467,7 @@ pub trait IsV2 {
 }
 
 impl<T: IsV2Elt> IsV2 for (T, T) {
+    #[inline]
     fn to_v2(&self) -> V2 {
         V2 {
             x: self.0.to_v2elt(),
@@ -482,6 +477,7 @@ impl<T: IsV2Elt> IsV2 for (T, T) {
 }
 
 impl IsV2 for V2 {
+    #[inline(always)]
     fn to_v2(&self) -> V2 {
         *self
     }

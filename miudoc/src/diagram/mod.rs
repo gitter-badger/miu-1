@@ -6,10 +6,11 @@ mod grid;
 
 #[allow(dead_code)]
 use self::primitives::*;
+use self::decoration::Angle;
 
 use regex::Regex;
 
-use std::f32::consts::PI;
+use std::f64::consts::PI;
 
 type Diagram = ();
 
@@ -29,6 +30,11 @@ const ASPECT: u32 = 2;
 
 const EPSILON: f32 = 1E-6;
 
+#[test]
+fn lock_down_diagonal_angle() {
+    assert!(Angle::DIAGONAL.get() == (f64::atan(1.0 / ASPECT as f64) * 180.0 / PI) as u16);
+}
+
 #[allow(unused_variables)]
 fn mut_replace(body: &mut str, re: Regex, subst: String) {
     ();
@@ -39,7 +45,7 @@ fn parse_diagram(mut ss: String) -> Diagram {
     let s: &mut str = &mut ss;
     equalize_line_lengths(s);
 
-    let DIAGONAL_ANGLE: f32 = f32::atan(1.0 / ASPECT as f32) * 180.0 / PI;
+    // let DIAGONAL_ANGLE: f32 = f32::atan(1.0 / ASPECT as f32) * 180.0 / PI;
 
     // diagramString = diagramString.rp(/([a-zA-Z]{2})o/g, '$1' + HIDE_O);
     // diagramString = diagramString.rp(/o([a-zA-Z]{2})/g, HIDE_O + '$1');

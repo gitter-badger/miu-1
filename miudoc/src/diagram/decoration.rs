@@ -1,7 +1,10 @@
 use diagram::primitives::*;
+use diagram::v2::{V2, IsV2, V2Elt};
 
 use std::iter;
 use std::slice;
+use std::ops::Add;
+use std::ops::Sub;
 
 //------------------------------------------------------------------------------
 // Angles
@@ -15,9 +18,17 @@ pub struct Angle {
 // TODO: A lot of the code in here is shared with v2::Offset.
 // Once const generics land, see if we can use a common modular type.
 impl Angle {
+    /// For consistency with Offset
     pub const DIVS: u16 = 360;
     pub const MAX: Angle = Angle { a: 359 };
     pub const ZERO: Angle = Angle { a: 0 };
+
+    // This is tied to the aspect ratio; there is a test locking down the
+    // relation. I've separated it out into a constant so that it can be
+    // used like other angles.
+    pub const DIAGONAL: Angle = Angle { a: 26 };
+
+    pub const A0: Angle = Angle { a: 0 };
     pub const A90: Angle = Angle { a: 90 };
     pub const A180: Angle = Angle { a: 180 };
     pub const A270: Angle = Angle { a: 270 };
@@ -33,22 +44,40 @@ impl Angle {
     }
 }
 
+//----------------------------------------------------------
+// Arithmetic operations
+
+impl Add for Angle {
+    type Output = Angle;
+    fn add(self, other: Angle) -> Angle {
+        Angle {a: self.get().wrapping_add(other.get()).mod_euc(Angle::DIVS)}
+    }
+}
+
+impl Sub for Angle {
+    type Output = Angle;
+    fn sub(self, other: Angle) -> Angle {
+        Angle {a: self.get().wrapping_sub(other.get()).mod_euc(Angle::DIVS)}
+    }
+}
+
 //------------------------------------------------------------------------------
 // Decorations
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 /// TODO: Replace this placeholder definition with something sensible.
 pub struct Decoration {
+    pos: V2,
     type_: char,
     /// Angle in degrees to rotate the thing by
     /// TODO: Define a better type for angle here.
-    angle: u16,
+    angle: Angle,
 }
 
 impl Decoration {
-    pub fn new(c: char, a: u16) -> Option<Decoration> {
+    pub fn new<T: IsV2>(v: T, c: char, a: Angle) -> Option<Decoration> {
         if is_decoration(c) {
-            Some(Decoration {type_: c, angle: a})
+            Some(Decoration {pos: v.to_v2(), type_: c, angle: a})
         } else {
             None
         }
@@ -67,7 +96,8 @@ pub struct DecorationSet {
 }
 
 impl DecorationSet {
-    pub fn insert(&mut self, d: Decoration) {
+    pub fn insert<T: IsDecoration>(&mut self, d: T) {
+        let d = d.to_decoration();
         if is_point(d.type_()) {
             self.points.push(d)
         } else {
@@ -90,5 +120,31 @@ impl<'a> Iterator for DecorationSetIter<'a> {
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
+    }
+}
+
+//------------------------------------------------------------------------------
+// Conversion trait(s)
+
+pub trait IsDecoration {
+    #[inline]
+    fn to_decoration(&self) -> Decoration;
+}
+
+impl<T: IsV2> IsDecoration for (T, char) {
+    fn to_decoration(&self) -> Decoration {
+        Decoration::new(self.0.to_v2(), self.1, Angle::ZERO).unwrap()
+    }
+}
+
+impl<T: IsV2> IsDecoration for (T, char, Angle) {
+    fn to_decoration(&self) -> Decoration {
+        Decoration::new(self.0.to_v2(), self.1, self.2).unwrap()
+    }
+}
+
+impl IsDecoration for (V2Elt, V2Elt, char, Angle) {
+    fn to_decoration(&self) -> Decoration {
+        Decoration::new((self.0, self.1).to_v2(), self.2, self.3).unwrap()
     }
 }

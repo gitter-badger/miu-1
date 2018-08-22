@@ -59,66 +59,77 @@ impl Path {
         self.c.is_some()
     }
 
-    pub fn ends_at(&self, v: V2) -> bool {
+    pub fn ends_at<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.a == v || self.b == v
     }
 
-    pub fn up_ends_at(&self, v: V2) -> bool {
+    pub fn up_ends_at<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_vertical()
         && self.a.x == v.x
         && V2Elt::min(self.a.y, self.b.y) == v.y
     }
 
-    pub fn down_ends_at(&self, v: V2) -> bool {
+    pub fn dn_ends_at<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_vertical()
         && self.a.x == v.x
         && V2Elt::max(self.a.y, self.b.y) == v.y
     }
 
-    pub fn left_ends_at(&self, v: V2) -> bool {
+    pub fn lf_ends_at<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_horizontal()
         && self.a.y == v.y
         && V2Elt::min(self.a.x, self.b.x) == v.x
     }
 
-    pub fn right_ends_at(&self, v: V2) -> bool {
+    pub fn rt_ends_at<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_horizontal()
         && self.a.y == v.y
         && V2Elt::max(self.a.x, self.b.x) == v.x
     }
 
-    pub fn diagonal_up_ends_at(&self, v: V2) -> bool {
+    pub fn diagonal_up_ends_at<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_diagonal()
         && if self.a.y < self.b.y { self.a == v }
            else { self.b == v }
     }
 
-    pub fn diagonal_down_ends_at(&self, v: V2) -> bool {
+    pub fn diagonal_down_ends_at<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_diagonal()
         && if self.b.y < self.a.y { self.a == v }
            else { self.b == v }
     }
 
-    pub fn backdiag_up_ends_at(&self, v: V2) -> bool {
+    pub fn backdiag_up_ends_at<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_backdiag() &&
         if self.a.y < self.b.y { self.a == v }
         else { self.b == v }
     }
 
-    pub fn backdiag_down_ends_at(&self, v: V2) -> bool {
+    pub fn backdiag_down_ends_at<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_backdiag() &&
         if self.b.y < self.a.y { self.a == v }
         else { self.b == v }
     }
 
-    pub fn vertical_passes_thru(&self, v: V2) -> bool {
+    pub fn vertical_passes_thru<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_vertical()
         && self.a.y == v.y
         && V2Elt::min(self.a.y, self.b.y) <= v.y
         && V2Elt::max(self.a.y, self.b.y) >= v.y
     }
 
-    pub fn horizontal_passes_thru(&self, v: V2) -> bool {
+    pub fn horizontal_passes_thru<T: IsV2>(&self, v: T) -> bool {
+        let v = v.to_v2();
         self.is_horizontal()
         && self.a.x == v.x
         && V2Elt::min(self.a.x, self.b.x) <= v.x
@@ -140,6 +151,31 @@ impl PathSet {
     }
     pub fn iter<'a>(&'a self) -> PathSetIter<'a> {
         PathSetIter{iter: self.set.iter()}
+    }
+    // TODO: See if these methods can be generated using a macro.
+    pub fn up_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.up_ends_at(v))
+    }
+    pub fn dn_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.dn_ends_at(v))
+    }
+    pub fn lf_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.lf_ends_at(v))
+    }
+    pub fn rt_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.rt_ends_at(v))
+    }
+    pub fn diagonal_up_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.diagonal_up_ends_at(v))
+    }
+    pub fn backdiag_up_ends_at<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.backdiag_up_ends_at(v))
+    }
+    pub fn horizontal_passes_thru<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.horizontal_passes_thru(v))
+    }
+    pub fn vertical_passes_thru<T: IsV2 + Copy>(&self, v: T) -> bool {
+        self.iter().any(|p| p.vertical_passes_thru(v))
     }
 }
 
