@@ -77,7 +77,7 @@ mod tests {
     }
     #[test]
     fn test_diagram_works() {
-        let mut s = "o->*";
+        let mut s = "o-->*";
         println!("{:?}", parse_diagram(s.to_string()));
     }
 }
