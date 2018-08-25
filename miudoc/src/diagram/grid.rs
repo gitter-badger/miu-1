@@ -112,14 +112,17 @@ impl Grid {
     /// Note that in the presence of zero-width characters, it may happen that
     /// the returned char doesn't fully incorporate what will be displayed.
     pub fn at_precise<T: IsV2>(&self, v: T) -> (CharMatch, char) {
-        let vv = v.to_v2();
-        let x = vv.x.round();
-        let y = vv.y.round();
+        let v = v.to_v2();
+        let x = v.x.round();
+        let y = v.y.round();
         let mut cache = self.pos_cache.borrow_mut();
         cache.entry((x, y))
             .or_insert_with(|| {
-                assert!(y < self.height);
-                assert!(MonoWidth(x) < self.width);
+                // Markdeep uses this same "hack" -- immersing the diagram in a
+                // sea of infinite spaces.
+                if ! self.in_bounds(v) {
+                    return (CharMatch::Exact, ' ');
+                }
                 let mut tmp = 0;
                 for c in self.data[y].chars() {
                     let sz = match UnicodeWidthChar::width(c) {
@@ -138,14 +141,22 @@ impl Grid {
             }).clone()
     }
 
+    #[inline]
+    pub fn in_bounds(&self, v: V2) -> bool {
+        v.y.round() < self.height && MonoWidth(v.x.round()) < self.width
+    }
+
     pub fn is_used<T: IsV2>(&self, vv: T) -> bool {
         let v = vv.to_v2();
-        self.used[v.y.round() * (self.width.get() + 1) + v.x.round()]
+        self.in_bounds(v)
+            && self.used[v.y.round() * (self.width.get() + 1) + v.x.round()]
     }
 
     pub fn set_used<T: IsV2>(&mut self, vv: T) {
         let v = vv.to_v2();
-        self.used[v.y.round() * (self.width.get() + 1) + v.x.round()] = true;
+        if self.in_bounds(v) {
+            self.used[v.y.round() * (self.width.get() + 1) + v.x.round()] = true;
+        }
     }
 
     pub fn is_solid_vline_at<T: IsV2>(&self, vv: T) -> bool {
@@ -315,7 +326,10 @@ impl<'a> From<&'a str> for Grid {
         let final_width = width.get();
         let mut data: Vec<String> = Vec::with_capacity(height);
         for (i, (line, MonoWidth(len))) in s.lines().zip(&orig_widths).enumerate() {
-            data[i] = line.clone().to_string();
+            println!("i: {}, line: {}, len: {}", i, line, len);
+            // We've only set the capacity, the length still needs to be incremented.
+            data.push(line.clone().to_string());
+            // data[i] = line.clone().to_string();
             for _ in 0..(final_width - len) {
                 data[i].push(' ');
             }
@@ -843,7 +857,7 @@ fn find_low_horizontal_lines(g: &mut Grid, ps: &mut PathSet) {
     }
 }
 
-fn find_paths(g: &mut Grid, ps: &mut PathSet) {
+pub fn find_paths(g: &mut Grid, ps: &mut PathSet) {
     find_solid_vlines(g, ps);
     find_solid_hlines(g, ps);
     find_solid_blines(g, ps);
@@ -853,14 +867,13 @@ fn find_paths(g: &mut Grid, ps: &mut PathSet) {
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-fn find_decorations(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationSet) {
+pub fn find_decorations(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationSet) {
     // The name used in Markdeep for this function "isEmptyOrVertex" doesn't
     // seem appropriate because there is already a separate is_vertex function
     // which is not being used here.
     let is_space_or_decor = |c: char| {
         c == ' ' || c == 'o' || c == 'v' || !c.is_alphanumeric()
     };
-    let is_letter = |c: char| { c.is_alphabetic() };
 
     // [MM] Is the point in the center of these values on a line? Allow points
     // that are vertically adjacent but not horizontally--they wouldn't fit
@@ -891,8 +904,6 @@ fn find_decorations(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationSet) 
                 let dn = g.at_faux(v.dn());
                 let lf = g.at_faux(v.lf());
                 let rt = g.at_faux(v.rt());
-                let lf_lf = g.at_faux(v.lf_n(2));
-                let rt_rt = g.at_faux(v.rt_n(2));
 
                 if ps.rt_ends_at(v.lf())     // [MM] Must be at the end of a line...
                     || ps.lf_ends_at(v.rt()) // [MM] or completely isolated NSEW
@@ -911,97 +922,133 @@ fn find_decorations(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationSet) 
                 else if is_tri(c) {
                     decors.insert((v, c));
                     g.set_used(v);
-                } else { // [MM] Arrow heads
-
-                    // [MM] If we find one, ensure that it is really an
-                    // arrow head and not a stray character by looking
-                    // for a connecting line.
-                    if c == '>' && (ps.rt_ends_at(v)
-                                    || ps.horizontal_passes_thru(v)) {
-                        let mut dx = Offset::ZERO;
-                        if is_point(g.at_faux((x + 1, y))) {
-                            // [MM] Back up if connecting to a point so as to
-                            // not overlap it
-                            dx = Offset::HALF;
-                        }
-                        decors.insert((v.x - dx, v.y, '>', Angle::A0));
-                        g.set_used(v);
-                    } else if c == '<'
-                        && (ps.lf_ends_at(v) || ps.horizontal_passes_thru(v)) {
-                        let mut dx = Offset::ZERO;
-                        if is_point(g.at_faux((x - 1, y))) {
-                            // [MM] Back up if connecting to a point so as to
-                            // not overlap it
-                            dx = Offset::HALF;
-                        }
-                        decors.insert((v.x + dx, v.y, '>', Angle::A180));
-                        g.set_used(v);
-                    } else if c == '^' {
-                        // [MM] Because of the aspect ratio, we need to look
-                        // in two slots for the end of the previous line
-                        // TODO: Fix indentation here.
-                        if ps.up_ends_at((v.x, v.y - Offset::HALF)) {
-                            decors.insert((v.x, v.y - Offset::HALF, '>', Angle::A270));
-                            g.set_used(v);
-                        } else if ps.up_ends_at(v) {
-                            decors.insert((v, '>', Angle::A270));
-                            g.set_used(v);
-                        } else if ps.diagonal_up_ends_at((v.x + Offset::HALF, v.y - Offset::HALF)) {
-                            decors.insert((v.x + Offset::HALF, v.y - Offset::HALF, '>', Angle::A270 + Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.diagonal_up_ends_at((v.x + Offset::QUARTER, v.y - Offset::QUARTER)) {
-                            decors.insert((v.x + Offset::QUARTER, v.y - Offset::QUARTER, '>', Angle::A270 + Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.diagonal_up_ends_at((v.x, v.y)) {
-                            decors.insert((v.x, v.y, '>', Angle::A270 + Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.backdiag_up_ends_at((v.x, v.y)) {
-                            decors.insert((v.x, v.y, c, Angle::A270 - Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.backdiag_up_ends_at((v.x - Offset::HALF, v.y - Offset::HALF)) {
-                            decors.insert((v.x - Offset::HALF, v.y - Offset::HALF, c, Angle::A270 - Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.backdiag_up_ends_at((v.x - Offset::QUARTER, v.y - Offset::QUARTER)) {
-                            decors.insert((v.x - Offset::QUARTER, v.y - Offset::QUARTER, c, Angle::A270 - Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.vertical_passes_thru((v.x, v.y)) {
-                            // Only try this if all others failed
-                            decors.insert((v.x, v.y - Offset::HALF, '>', Angle::A270));
-                            g.set_used(v);
-                        }
-                    } else if c == 'v' {
-                        if ps.dn_ends_at((v.x, v.y + Offset::HALF)) {
-                            decors.insert((v.x, v.y + Offset::HALF, '>', Angle::A90));
-                            g.set_used(v);
-                        } else if ps.dn_ends_at(v) {
-                            decors.insert((v.x, v.y, '>', Angle::A90));
-                            g.set_used(v);
-                        } else if ps.diagonal_dn_ends_at(v) {
-                            decors.insert((v.x, v.y, '>', Angle::A90 + Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.diagonal_dn_ends_at((v.x - Offset::HALF, v.y + Offset::HALF)) {
-                            decors.insert((v.x - Offset::HALF, v.y + Offset::HALF, '>', Angle::A90 + Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.diagonal_dn_ends_at((v.x - Offset::QUARTER, v.y + Offset::QUARTER)) {
-                            decors.insert((v.x - Offset::QUARTER, v.y + Offset::QUARTER, '>', Angle::A90 + Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.backdiag_dn_ends_at(v) {
-                            decors.insert((v.x, v.y, '>', Angle::A90 - Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.backdiag_dn_ends_at((v.x + Offset::HALF, v.y + Offset::HALF)) {
-                            decors.insert((v.x + Offset::HALF, v.y + Offset::HALF, '>', Angle::A90 - Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.backdiag_dn_ends_at((v.x + Offset::QUARTER, v.y + Offset::QUARTER)) {
-                            decors.insert((v.x + Offset::QUARTER, v.y + Offset::QUARTER, '>', Angle::A90 - Angle::DIAGONAL));
-                            g.set_used(v);
-                        } else if ps.vertical_passes_thru(v) {
-                            // [MM] Only try this if all others failed
-                            decors.insert((v.x, v.y + Offset::HALF, '>', Angle::A90));
-                            g.set_used(v);
-                        }
-                    } // arrow heads
-                } // decoration type
+                } else {
+                    find_arrowheads(g, ps, decors, v, c);
+                }
             } // y
         } // x
+    }
+}
+
+fn find_arrowheads(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationSet, v: V2, c: char) {
+    let lf = v.lf();
+    let rt = v.rt();
+
+    let mut is_used = true;
+
+    // [MM] If we find one, ensure that it is really an
+    // arrow head and not a stray character by looking
+    // for a connecting line.
+    if c == '>' && (ps.rt_ends_at(v) || ps.horizontal_passes_thru(v)) {
+        let mut dx = Offset::ZERO;
+        if is_point(g.at_faux(rt)) {
+            // [MM] Back up if connecting to a point so as to
+            // not overlap it
+            dx = Offset::HALF;
+        }
+        decors.insert((v.x - dx, v.y, '>', Angle::A0));
+    } else if c == '<' && (ps.lf_ends_at(v) || ps.horizontal_passes_thru(v)) {
+        let mut dx = Offset::ZERO;
+        if is_point(g.at_faux(lf)) {
+            // [MM] Back up if connecting to a point so as to
+            // not overlap it
+            dx = Offset::HALF;
+        }
+        decors.insert((v.x + dx, v.y, '>', Angle::A180));
+    } else if c == '^' {
+        // [MM] Because of the aspect ratio, we need to look
+        // in two slots for the end of the previous line
+        // TODO: Fix indentation here.
+        if ps.up_ends_at((v.x, v.y - Offset::HALF)) {
+            decors.insert((v.x, v.y - Offset::HALF, '>', Angle::A270));
+        } else if ps.up_ends_at(v) {
+            decors.insert((v, '>', Angle::A270));
+        } else if ps.diagonal_up_ends_at((v.x + Offset::HALF, v.y - Offset::HALF)) {
+            decors.insert((
+                v.x + Offset::HALF,
+                v.y - Offset::HALF,
+                '>',
+                Angle::A270 + Angle::DIAGONAL,
+            ));
+        } else if ps.diagonal_up_ends_at((v.x + Offset::QUARTER, v.y - Offset::QUARTER)) {
+            decors.insert((
+                v.x + Offset::QUARTER,
+                v.y - Offset::QUARTER,
+                '>',
+                Angle::A270 + Angle::DIAGONAL,
+            ));
+        } else if ps.diagonal_up_ends_at((v.x, v.y)) {
+            decors.insert((v.x, v.y, '>', Angle::A270 + Angle::DIAGONAL));
+        } else if ps.backdiag_up_ends_at((v.x, v.y)) {
+            decors.insert((v.x, v.y, c, Angle::A270 - Angle::DIAGONAL));
+        } else if ps.backdiag_up_ends_at((v.x - Offset::HALF, v.y - Offset::HALF)) {
+            decors.insert((
+                v.x - Offset::HALF,
+                v.y - Offset::HALF,
+                c,
+                Angle::A270 - Angle::DIAGONAL,
+            ));
+        } else if ps.backdiag_up_ends_at((v.x - Offset::QUARTER, v.y - Offset::QUARTER)) {
+            decors.insert((
+                v.x - Offset::QUARTER,
+                v.y - Offset::QUARTER,
+                c,
+                Angle::A270 - Angle::DIAGONAL,
+            ));
+        } else if ps.vertical_passes_thru((v.x, v.y)) {
+            // Only try this if all others failed
+            decors.insert((v.x, v.y - Offset::HALF, '>', Angle::A270));
+        } else {
+            is_used = false;
+        }
+    } else if c == 'v' {
+        if ps.dn_ends_at((v.x, v.y + Offset::HALF)) {
+            decors.insert((v.x, v.y + Offset::HALF, '>', Angle::A90));
+        } else if ps.dn_ends_at(v) {
+            decors.insert((v.x, v.y, '>', Angle::A90));
+        } else if ps.diagonal_dn_ends_at(v) {
+            decors.insert((v.x, v.y, '>', Angle::A90 + Angle::DIAGONAL));
+        } else if ps.diagonal_dn_ends_at((v.x - Offset::HALF, v.y + Offset::HALF)) {
+            decors.insert((
+                v.x - Offset::HALF,
+                v.y + Offset::HALF,
+                '>',
+                Angle::A90 + Angle::DIAGONAL,
+            ));
+        } else if ps.diagonal_dn_ends_at((v.x - Offset::QUARTER, v.y + Offset::QUARTER)) {
+            decors.insert((
+                v.x - Offset::QUARTER,
+                v.y + Offset::QUARTER,
+                '>',
+                Angle::A90 + Angle::DIAGONAL,
+            ));
+        } else if ps.backdiag_dn_ends_at(v) {
+            decors.insert((v.x, v.y, '>', Angle::A90 - Angle::DIAGONAL));
+        } else if ps.backdiag_dn_ends_at((v.x + Offset::HALF, v.y + Offset::HALF)) {
+            decors.insert((
+                v.x + Offset::HALF,
+                v.y + Offset::HALF,
+                '>',
+                Angle::A90 - Angle::DIAGONAL,
+            ));
+        } else if ps.backdiag_dn_ends_at((v.x + Offset::QUARTER, v.y + Offset::QUARTER)) {
+            decors.insert((
+                v.x + Offset::QUARTER,
+                v.y + Offset::QUARTER,
+                '>',
+                Angle::A90 - Angle::DIAGONAL,
+            ));
+        } else if ps.vertical_passes_thru(v) {
+            // [MM] Only try this if all others failed
+            decors.insert((v.x, v.y + Offset::HALF, '>', Angle::A90));
+        } else {
+            is_used = false;
+        }
+    } else {
+        is_used = false;
+    }
+
+    if is_used {
+        g.set_used(v);
     }
 }

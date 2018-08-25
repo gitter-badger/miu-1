@@ -141,11 +141,15 @@ impl Path {
     }
 }
 
+#[derive(Debug)]
 pub struct PathSet {
     set: HashSet<Path>,
 }
 
 impl PathSet {
+    pub fn new() -> PathSet {
+        PathSet { set: HashSet::new() }
+    }
     pub fn insert(&mut self, p: Path) {
         self.set.insert(p);
     }

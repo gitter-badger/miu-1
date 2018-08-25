@@ -38,9 +38,9 @@ impl Angle {
     }
 
     pub fn ratio(n: u16, d: u16) -> Angle {
-        let DIVS = Angle::DIVS;
-        assert!(0 < n && n < d && d <= DIVS && DIVS % d == 0);
-        Angle {a: DIVS/d * n}
+        let divs = Angle::DIVS;
+        assert!(0 < n && n < d && d <= divs && divs % d == 0);
+        Angle {a: divs/d * n}
     }
 }
 
@@ -90,12 +90,16 @@ impl Decoration {
 //------------------------------------------------------------------------------
 // Decoration sets
 
+#[derive(Debug)]
 pub struct DecorationSet {
     arrows: Vec<Decoration>,
     points: Vec<Decoration>,
 }
 
 impl DecorationSet {
+    pub fn new() -> DecorationSet {
+        DecorationSet { arrows: vec![], points: vec![] }
+    }
     pub fn insert<T: IsDecoration>(&mut self, d: T) {
         let d = d.to_decoration();
         if is_point(d.type_()) {

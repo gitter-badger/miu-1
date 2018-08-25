@@ -30,9 +30,9 @@ impl Offset {
     }
 
     pub fn ratio(n: u8, d: u8) -> Offset {
-        let DIVS = Offset::DIVS;
-        assert!(0 < n && n < d && d <= DIVS && DIVS % d == 0);
-        Offset {o: DIVS/d * n}
+        let divs = Offset::DIVS;
+        assert!(0 < n && n < d && d <= divs && divs % d == 0);
+        Offset {o: divs/d * n}
     }
 }
 
@@ -44,7 +44,7 @@ impl Add<Offset> for Offset {
 
     fn add(self, x: Offset) -> V2Elt {
         let z = self.o as u16 + x.o as u16;
-        let base = (z / (Self::DIVS as u16)) as u32;
+        let base = (z / (Self::DIVS as u16)).into();
         let offset = Offset {
             o: (z % (Self::DIVS as u16)) as u8,
         };
@@ -68,7 +68,10 @@ impl Sub<Offset> for Offset {
 //------------------------------------------------------------------------------
 // Vector elements
 
-pub type V2EltBase = u32;
+// It is a shame that we abandon type safety here but having optional types for
+// in bounds vs out of bounds complicates the code quite a bit for little gain
+// `(>_<)`.
+pub type V2EltBase = i32;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct V2Elt {
@@ -78,13 +81,15 @@ pub struct V2Elt {
 
 impl V2Elt {
     pub const MAX: V2Elt = V2Elt {
-        base: u32::min_value(),
+        base: <V2EltBase>::max_value(),
         offset: Offset::MAX,
     };
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn force_sub(&self, v: V2Elt) -> V2Elt {
         let d = *self - v;
-        assert!(0 <= d.base && d.base <= <V2EltBase>::max_value() as D2EltBase);
+        assert!(<V2EltBase>::min_value() as D2EltBase <= d.base
+                && d.base <= <V2EltBase>::max_value() as D2EltBase);
         V2Elt {
             base: d.base as V2EltBase,
             offset: d.offset,

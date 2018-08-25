@@ -116,7 +116,7 @@ pub fn is_solid_bline(c: char) -> bool {
 }
 
 #[test]
-fn decoration_chars_definition() {
+fn markdeep_consistent_decoration_chars() {
     let it = ARROW_HEAD_CHARS.iter().chain(&POINT_CHARS).chain(&JUMP_CHARS)
         .chain(&GRAY_CHARS).chain(&TRI_CHARS);
     for (i, &c) in it.enumerate() {
