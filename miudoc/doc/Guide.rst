@@ -4,6 +4,10 @@ Diagrams
 Gotchas:
 --------
 
+* The following Unicode scalars are not allowed:
+
+  - Private use area: U+E004, U+F8FF
+
 * Line segments should have length 3 or more (including bends, intersections,
   arrowheads, vertices). Some examples:
 

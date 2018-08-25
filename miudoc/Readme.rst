@@ -78,17 +78,6 @@ Misc:
 * Bay area Rust talk: https://air.mozilla.org/rust-meetup-december-2013/
   (video can be downloaded!)
 
-Diagram gotchas
-===============
-
-The following Unicode scalars are not allowed:
-
-* Private use area: U+E004, U+F8FF
-
-For the rest, try and see what things break 😅.
-
-============================================================================
-
 License
 =======
 
