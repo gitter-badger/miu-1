@@ -1,0 +1,76 @@
+-- | Canonical conversions.
+-- |
+-- | Typically you would not want to write this module in isolation, but inside
+-- | :miu:modtype:`Convert` or :miu:modtype:`BiConvert`.
+-- |
+-- | Intuition
+-- | ---------
+-- |
+-- | For some types, there is a conversion that "just makes sense". For example,
+-- |
+-- | * Converting an integer of lower precision to one of higher precision.
+-- | * Converting an :miu:type:`Integer` to a :miu:type:`Rational`.
+-- | * Converting a :miu:type:`FilePath` to a :miu:type:`String`.
+-- | * Converting a :miu:type:`String` to a :miu:type:`ByteString`.
+-- |
+-- | Laws
+-- | ----
+-- |
+-- | Modules with this type should satisfy the following criteria:
+-- |
+-- | * ``from`` should be 1-to-1 (injective). In other words, if both the
+-- |   domain and codomain have equality relations, then
+-- |   ``from x = from y ==> x = y``.
+-- | * ``from`` should be structure-preserving, if possible [1]_. For example,
+-- |   suppose that we have ``u : A``, ``v : A`` and an operation ``@`` such
+-- |   that both ``u @ v`` and ``(from u) @ (from v)`` don't panic. Then, we
+-- |   should have ``from (u @ v) == (from u) @ (from v)``.
+-- |
+-- | Hence, ``from`` is an `embedding <https://en.wikipedia.org/wiki/Embedding>`_.
+-- |
+-- | Furthermore, the module should be universal in the following sense:
+-- | if there exist modules ``From c a`` and ``From c b`` then
+-- | ``From a b`` should make the corresponding diagram commute. Similarly,
+-- | if there exist modules ``From a d`` and ``From d b`` then the corresponding
+-- | diagram should commute.
+-- |
+-- |               ******************************************
+-- |               *                                        *
+-- |               *           from            from         *
+-- |               *   w : c --------> u : a ---------+     *
+-- |               *     |               |            |     *
+-- |               *     |               | from       v     *
+-- |               *     |               |          z : d   *
+-- |               *     |    from       v     from   |     *
+-- |               *     +-----------> v : b <--------+     *
+-- |               *                                        *
+-- |               ******************************************
+-- |
+-- | .. [1]
+-- |
+-- |   This may not be always possible. For example, consider wrapping arithmetic
+-- |   operations on finite-precision integers, and ``from`` being up-casting.
+-- |   In such a case, we take the pragmatic choice and allow it because having
+-- |   panic-on-overflow operations is structure-preserving according to our
+-- |   definition.
+implicit type From a b where
+  -- | A conversion that doesn't fail.
+  from : a -> b
+
+-- | Canonical conversions with partial inverses.
+implicit type Convert a b where
+  -- TODO: Is it possible to expose implementation of a type in a module
+  -- signature like associated types in Rust? Otherwise, we won't be able
+  -- to have a custom error type here (at least, not ergonomically)...
+  implicit Fwd : From a b
+  implicit Bwd : From b (Maybe a)
+
+-- | Bidirectional canonical conversions.
+-- |
+-- | Laws
+-- | ----
+-- |
+-- | ``Fwd.from`` and ``Bwd.from`` are inverses.
+implicit type BiConvert a b where
+  implicit Fwd : From a b
+  implicit Bwd : From b a
