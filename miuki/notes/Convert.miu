@@ -5,17 +5,14 @@
 -- |
 -- | Intuition
 -- | ---------
--- |
 -- | For some types, there is a conversion that "just makes sense". For example,
 -- |
 -- | * Converting an integer of lower precision to one of higher precision.
 -- | * Converting an :miu:type:`Integer` to a :miu:type:`Rational`.
--- | * Converting a :miu:type:`FilePath` to a :miu:type:`String`.
 -- | * Converting a :miu:type:`String` to a :miu:type:`ByteString`.
 -- |
 -- | Laws
 -- | ----
--- |
 -- | Modules with this type should satisfy the following criteria:
 -- |
 -- | * ``from`` should be 1-to-1 (injective). In other words, if both the
@@ -53,24 +50,52 @@
 -- |   In such a case, we take the pragmatic choice and allow it because having
 -- |   panic-on-overflow operations is structure-preserving according to our
 -- |   definition.
-implicit type From a b where
+-- |
+-- | Guidelines
+-- | ----------
+-- | In typical cases, ``from`` will be the
+-- | `inclusion map <https://en.wikipedia.org/wiki/Inclusion_map>`_. If that
+-- | isn't the case, consider keeping the module explicit.
+mod type From a b where
   -- | A conversion that doesn't fail.
-  from : a -> b
+  let from : a -> b
+
+let from : {M : From a b} -> a -> b
+let from = M.from
 
 -- | Canonical conversions with partial inverses.
-implicit type Convert a b where
+mod type Convert a b where
   -- TODO: Is it possible to expose implementation of a type in a module
   -- signature like associated types in Rust? Otherwise, we won't be able
   -- to have a custom error type here (at least, not ergonomically)...
   implicit Fwd : From a b
   implicit Bwd : From b (Maybe a)
 
--- | Bidirectional canonical conversions.
+-- | Canonical conversions with inverses.
+-- |
+-- | Intuition
+-- | ---------
+-- | In some situations, you may encounter types which are essentially the same
+-- | but you may want to work with different representations. For example, if we
+-- | use ``m`` and ``km`` to represent metres and kilometres respectively,
+-- | we are free to convert ``1000.0 : [m]`` to ``1.0 : [km]`` and vice-versa
+-- | any possibility of failure [#]_[#]_.
+-- |
+-- | .. [#] See :ref:`Units of Measure` if you're confused about the notation.
+-- | .. [#] We're ignoring issues due to loss of precision\/underflow\/overflow
+-- |        here for simplicity.
 -- |
 -- | Laws
 -- | ----
--- |
 -- | ``Fwd.from`` and ``Bwd.from`` are inverses.
-implicit type BiConvert a b where
+-- |
+-- | Guidelines
+-- | ----------
+-- | If the conversion isn't "obvious", consider keeping the module explicit.
+-- | For example, if you have ``type User = Admin | Plain`` then having an
+-- | implicit of type ``BiConvert User Bool`` may not be a good idea.
+-- | On the other hand, if you have ``type FileExists = Exists | Missing``,
+-- | then having an implicit of type ``BiConvert FileExists Bool`` is okay.
+mod type BiConvert a b where
   implicit Fwd : From a b
   implicit Bwd : From b a
