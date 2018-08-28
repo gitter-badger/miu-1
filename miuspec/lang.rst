@@ -25,25 +25,16 @@ Principles
    :header: Symbol, Association(s), Exception(s)
    :widths: 3, 15, 8
 
-   ``.``
-       , "composition (``.>``, ``<.:``), record/module access, bits (``.&.``)"
-       , ""
-   ``:``
-       , "type (``:``), composition with 2 args (``:.>``), package access"
-       , "special operators (``:=``, ``:-``)"
-   ``..``
-       , "Too lazy to write it out
+   ``.``, "composition (``.>``, ``<.:``), record/module access, bits (``.&.``)", ""
+   ``:``, "type (``:``), composition with 2 args (``:.>``), package access", "special operators (``:=``, ``:-``)"
+   ``..``, "Too lazy to write it out
           import (``(..)``, ``(.. - x)``),
           wildcards (``Just ..``), ignored hole (``PartialSignatures``),
-          enumeration (``1 .. 5``, ``1 ..= 5``)"
-       , ""
+          enumeration (``1 .. 5``, ``1 ..= 5``)", ""
    ``|``, "No unifying theme
             or (``|``, ``||``),
             application (``|>``, ``>|>``),
-            such that (comprehension/refinement)"
-       , ""
-   .. the double-quote is needed to prevent the comma from getting parsed as a
-      separator :(
+            such that (comprehension/refinement)", ""
    "``,``", "sequence", ""
    ``*``, "applicative (``>*>``), deref", ""
    ``;``, "monadic (``>;>``)", ""
