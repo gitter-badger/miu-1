@@ -459,7 +459,8 @@ fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
     for y in 0..g.height() {
-        for mut x in 0..g.width() {
+        let mut x = 0;
+        while x < g.width() {
             let cur = (x, y).to_v2();
             if g.is_solid_hline_at(cur) {
                 // [MM] Begins a line...find the end
@@ -498,6 +499,7 @@ fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
                 }
                 // [MM] Continue the search from the end x+1
             }
+            x += 1;
         }
     }
 }
