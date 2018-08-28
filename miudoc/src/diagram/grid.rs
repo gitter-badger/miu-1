@@ -363,7 +363,8 @@ fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
     // [MM] Find all solid vertical lines. Iterate horizontally
     // so that we never hit the same line twice
     for x in 0..g.width() {
-        for mut y in 0..g.height() {
+        let mut y = 0;
+        while y < g.height() {
             let cur = (x, y).to_v2();
             // TODO: Refactor this block out into a function.
             if g.is_solid_vline_at(cur) {
@@ -452,13 +453,15 @@ fn find_solid_vlines(g: &mut Grid, ps: &mut PathSet) {
                     (cur.x, cur.y + Offset::HALF).to_v2(),
                 ));
             }
+            y += 1;
         }
     }
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
-    for y in 0..g.height() {
+    let mut y = 0;
+    while y < g.height() {
         let mut x = 0;
         while x < g.width() {
             let cur = (x, y).to_v2();
@@ -501,6 +504,7 @@ fn find_solid_hlines(g: &mut Grid, ps: &mut PathSet) {
             }
             x += 1;
         }
+        y += 1;
     }
 }
 
@@ -781,7 +785,8 @@ fn find_low_horizontal_lines(g: &mut Grid, ps: &mut PathSet) {
     // into an ASCII character, which could be a source code
     // identifier such as __FILE__ embedded in the diagram.
     for y in 0 .. g.height() {
-        for mut x in 2 .. g.width() - 2 {
+        let mut x = 2;
+        while x < g.width() - 2 {
             let v = (x, y).to_v2();
 
             let up_lf = g.at_faux(v.up().lf());
@@ -855,6 +860,7 @@ fn find_low_horizontal_lines(g: &mut Grid, ps: &mut PathSet) {
                 }
                 ps.insert(Path::straight(a, b));
             }
+            x += 1;
         }
     }
 }
