@@ -169,6 +169,10 @@ impl PathSet {
     pub fn new() -> PathSet {
         PathSet { set: HashSet::new() }
     }
+    pub fn len(&self) -> usize {
+        // Why is this function named len instead of size :(
+        self.set.len()
+    }
     pub fn insert(&mut self, p: Path) {
         self.set.insert(p);
     }

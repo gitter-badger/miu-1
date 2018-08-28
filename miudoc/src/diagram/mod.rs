@@ -78,6 +78,12 @@ mod tests {
         assert!(Angle::DIAGONAL.get() == (f64::atan(1.0 / ASPECT as f64) * 180.0 / PI) as u16);
     }
     #[test]
+    fn no_overlapping_paths() {
+        let s = "---";
+        let diagram = parse_diagram(s.to_string());
+        assert!(diagram.paths.len() == 1);
+    }
+    #[test]
     fn test_diagram_works() {
         let s1 = " .---. \n";
         let s2 = " |   | \n";
