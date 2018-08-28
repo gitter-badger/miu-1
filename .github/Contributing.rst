@@ -1,3 +1,13 @@
+Project organization
+********************
+
+* ``miudoc`` - documentation
+* ``miuki`` - compiler
+* ``miumiugo`` - search
+* ``miuspec`` - specification
+* ``sanna`` - build system for all the projects (including itself)
+* ``sojiro`` - editor services
+
 Guidelines
 **********
 

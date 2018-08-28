@@ -26,3 +26,10 @@ Build instructions
   # navigate to a subproject, e.g. `cd miuki`
   cd miuki
   sanna build
+
+Contributing
+============
+
+See `Contributing <https://github.com/theindigamer/miu/blob/master/.github/Contributing.rst>`_.
+It is a bit sparse at the moment, please ask on the issue tracker for help if
+you're stuck with something.
