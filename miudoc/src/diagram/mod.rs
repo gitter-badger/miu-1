@@ -68,6 +68,7 @@ fn parse_diagram(mut ss: String) -> Diagram {
 
 mod tests {
     use super::decoration::Angle;
+    use super::to_svg::ToSvg;
     use super::ASPECT;
     use super::parse_diagram;
     use std::f64::consts::PI;
@@ -78,7 +79,18 @@ mod tests {
     }
     #[test]
     fn test_diagram_works() {
-        let s = "o-->*";
-        println!("{:?}", parse_diagram(s.to_string()));
+        let s1 = " .---. \n";
+        let s2 = " |   | \n";
+        let s3 = " '-+-' \n";
+        let s4 = "   |   \n";
+        // let s1 = "o--\\n";
+        // let s2 = "   |\n";
+        // let s3 = "   v\n";
+        // let s4 = "   *\n";
+        let dia = parse_diagram(format!("{}{}{}{}", s1, s2, s3, s4));
+        println!("{:?}", dia);
+        for p in dia.paths.iter() {
+            println!("{}", p.to_svg());
+        }
     }
 }

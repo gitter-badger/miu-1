@@ -1,5 +1,8 @@
+use super::to_svg::ToSvg;
+use super::v2::*;
 
-use diagram::v2::*;
+use svg::node::element::Path as SvgPath;
+use svg::node::element::path::Data as SvgData;
 
 use std::collections::HashSet;
 use std::collections::hash_set;
@@ -135,9 +138,25 @@ impl Path {
         && V2Elt::min(self.a.x, self.b.x) <= v.x
         && V2Elt::max(self.a.x, self.b.x) >= v.x
     }
+}
 
-    pub fn to_svg(&self) -> String {
-        unimplemented!()
+impl ToSvg for Path {
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn to_svg(&self) -> String {
+        let mut d = SvgData::new()
+            .move_to(self.a.as_tuple());
+        d = if self.is_curved() {
+                d.cubic_curve_to(self.c.unwrap().as_tuple())
+                    .cubic_curve_to(self.d.unwrap().as_tuple())
+                    .cubic_curve_to(self.b.as_tuple())
+            } else {
+                d.line_to(self.b.as_tuple())
+            };
+        let mut p = SvgPath::new()
+            .set("fill", "none")
+            .set("d", d);
+        p = if self.dashed { p.set("stroke-dasharray", "3,6") } else { p };
+        format!("{}", p)
     }
 }
 

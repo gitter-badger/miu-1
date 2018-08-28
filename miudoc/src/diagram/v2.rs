@@ -37,6 +37,16 @@ impl Offset {
 }
 
 //----------------------------------------------------------
+// Conversions
+
+/// Returns a floating point value in the range [0.0, 1.0).
+impl Into<f64> for Offset {
+    fn into(self) -> f64 {
+        self.get() as f64 / Offset::DIVS as f64
+    }
+}
+
+//----------------------------------------------------------
 // Arithmetic operations
 
 impl Add<Offset> for Offset {
@@ -157,7 +167,8 @@ impl TryFrom<D2Elt> for V2Elt {
 // Only use this when outputting stuff.
 impl Into<f64> for V2Elt {
     fn into(self) -> f64 {
-        self.base as f64 + self.offset.into()
+        let tmp: f64 = self.offset.into();
+        self.base as f64 + tmp
     }
 }
 
@@ -166,8 +177,8 @@ impl Into<f64> for V2Elt {
 
 impl Add<Offset> for V2Elt {
     type Output = V2Elt;
-    fn add(self, _x: Offset) -> Self::Output {
-        unimplemented!()
+    fn add(self, x: Offset) -> Self::Output {
+        V2Elt::from(self.base) + (self.offset + x)
     }
 }
 
@@ -353,6 +364,9 @@ impl V2 {
     pub fn is_exact(&self) -> bool {
         self.x.is_exact() && self.y.is_exact()
     }
+    pub fn as_tuple(self) -> (f64, f64) {
+        self.into()
+    }
 }
 
 //----------------------------------------------------------
@@ -360,12 +374,18 @@ impl V2 {
 
 impl TryFrom<D2> for V2 {
     type Error = ();
-    fn try_from(d: D2) -> Result<V2, ()> {
+    fn try_from(d: D2) -> Result<V2, Self::Error> {
         if d.x < V2Elt::MAX.into() && d.y < V2Elt::MAX.into() {
             Ok(d.force_into())
         } else {
             Err(())
         }
+    }
+}
+
+impl Into<(f64, f64)> for V2 {
+    fn into(self) -> (f64, f64) {
+        (self.x.into(), self.y.into())
     }
 }
 
