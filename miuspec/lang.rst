@@ -38,13 +38,13 @@ Principles
    "``,``", "sequence", ""
    ``*``, "applicative (``>*>``), deref", ""
    ``;``, "monadic (``>;>``)", ""
-   ``_``, "Holes (``_1``, ``_a``)", ""
+   ``?``, "Holes (``?1``, ``?a``)", ""
    ``&``, "and (``&``, ``&&``), borrow/address", ""
    ``!``, "index (``!!``, ``!?``)", ""
    ``->``, "function arrow, then (if/match)", ""
    ``<-``, "pattern", ""
    ``#``, "primitive", ""
-   ``@``, "optics?", ""
+   ``@``, "optics?, type applications?", ""
    ``^``, "", ""
 
 ****************
