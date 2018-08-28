@@ -3,6 +3,7 @@ mod v2;
 mod path;
 mod decoration;
 mod grid;
+mod to_svg;
 
 #[allow(dead_code)]
 use self::grid::{Grid, find_paths, find_decorations};

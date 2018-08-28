@@ -1,15 +1,13 @@
 -- | Canonical conversions.
 -- |
--- | Typically you would not want to write this module in isolation, but inside
--- | :miu:modtype:`Convert` or :miu:modtype:`BiConvert`.
--- |
--- | Intuition
--- | ---------
 -- | For some types, there is a conversion that "just makes sense". For example,
 -- |
 -- | * Converting an integer of lower precision to one of higher precision.
 -- | * Converting an :miu:type:`Integer` to a :miu:type:`Rational`.
 -- | * Converting a :miu:type:`String` to a :miu:type:`ByteString`.
+-- |
+-- | In these cases, it makes sense to have a ``From`` module to convert values
+-- | of one type to another.
 -- |
 -- | Laws
 -- | ----
@@ -26,20 +24,20 @@
 -- | Hence, ``from`` is an `embedding <https://en.wikipedia.org/wiki/Embedding>`_.
 -- |
 -- | Furthermore, the module should be universal in the following sense:
--- | if there exist modules ``From c a`` and ``From c b`` then
--- | ``From a b`` should make the corresponding diagram commute. Similarly,
--- | if there exist modules ``From a d`` and ``From d b`` then the corresponding
+-- | if there exist modules ``From C A`` and ``From C B`` then
+-- | ``From A B`` should make the corresponding diagram commute. Similarly,
+-- | if there exist modules ``From A D`` and ``From D B`` then the corresponding
 -- | diagram should commute.
 -- |
 -- |               ******************************************
 -- |               *                                        *
 -- |               *           from            from         *
--- |               *   w : c --------> u : a ---------+     *
+-- |               *   y : C --------> w : A ---------+     *
 -- |               *     |               |            |     *
 -- |               *     |               | from       v     *
--- |               *     |               |          z : d   *
+-- |               *     |               |          z : D   *
 -- |               *     |    from       v     from   |     *
--- |               *     +-----------> v : b <--------+     *
+-- |               *     +-----------> x : B <--------+     *
 -- |               *                                        *
 -- |               ******************************************
 -- |
@@ -53,33 +51,56 @@
 -- |
 -- | Guidelines
 -- | ----------
--- | In typical cases, ``from`` will be the
--- | `inclusion map <https://en.wikipedia.org/wiki/Inclusion_map>`_. If that
--- | isn't the case, consider keeping the module explicit.
-mod type From a b where
+-- | #. Typically, you would not want to write this module in isolation, but
+-- |    inside :miu:modtype:`Convert` or :miu:modtype:`BiConvert`.
+-- | #. Typically, ``from`` will be the
+-- |    `inclusion map <https://en.wikipedia.org/wiki/Inclusion_map>`_. If that
+-- |    isn't the case, consider keeping the module explicit.
+mod type From inp out where
   -- | A conversion that doesn't fail.
-  let from : a -> b
+  let from : inp -> out
 
-let from : {M : From a b} -> a -> b
+let from : {M : From inp out} -> inp -> out
 let from = M.from
 
 -- | Canonical conversions with partial inverses.
+-- |
+-- | When you're performing conversions, it is often the case that conversions
+-- | in one direction will always succeed whereas those in the opposite
+-- | direction may fail. For example,
+-- |
+-- | * All :miu:type:`Natural`s can be converted to :miu:type:`Integer`s but not
+-- |   vice-versa.
+-- | * All :miu:type:`String`s can be converted to :miu:type:`ByteString`s but
+-- |   not vice-versa.
+-- |
+-- | In such a situation, it makes sense to expose a pair of conversions, a
+-- | forward conversion which always succeeds, and a backward conversion which
+-- | may fail by returning :miu:`Nothing`.
+-- |
+-- | Laws
+-- | ----
+-- | If ``y = Forward.from (x : A)``, and we have equality defined on `A`,
+-- | then ``Backward.from y == Just x``.
+-- |
+-- | Guidelines
+-- | ----------
+-- | Use :miu:modtype:`BiConvert` instead if the backward conversion cannot
+-- | fail.
 mod type Convert a b where
   -- TODO: Is it possible to expose implementation of a type in a module
   -- signature like associated types in Rust? Otherwise, we won't be able
   -- to have a custom error type here (at least, not ergonomically)...
-  implicit Fwd : From a b
-  implicit Bwd : From b (Maybe a)
+  implicit Forward : From a b
+  implicit Backward : From b (Maybe a)
 
 -- | Canonical conversions with inverses.
 -- |
--- | Intuition
--- | ---------
 -- | In some situations, you may encounter types which are essentially the same
 -- | but you may want to work with different representations. For example, if we
 -- | use ``m`` and ``km`` to represent metres and kilometres respectively,
 -- | we are free to convert ``1000.0 : [m]`` to ``1.0 : [km]`` and vice-versa
--- | any possibility of failure [#]_[#]_.
+-- | without any possibility of failure [#]_[#]_.
 -- |
 -- | .. [#] See :ref:`Units of Measure` if you're confused about the notation.
 -- | .. [#] We're ignoring issues due to loss of precision\/underflow\/overflow
@@ -87,15 +108,15 @@ mod type Convert a b where
 -- |
 -- | Laws
 -- | ----
--- | ``Fwd.from`` and ``Bwd.from`` are inverses.
+-- | ``Forward.from`` and ``Backward.from`` are inverses.
 -- |
 -- | Guidelines
 -- | ----------
 -- | If the conversion isn't "obvious", consider keeping the module explicit.
--- | For example, if you have ``type User = Admin | Plain`` then having an
+-- | For example, if you have ``type User = Admin | Ordinary`` then having an
 -- | implicit of type ``BiConvert User Bool`` may not be a good idea.
 -- | On the other hand, if you have ``type FileExists = Exists | Missing``,
 -- | then having an implicit of type ``BiConvert FileExists Bool`` is okay.
 mod type BiConvert a b where
-  implicit Fwd : From a b
-  implicit Bwd : From b a
+  implicit Forward : From a b
+  implicit Backward : From b a

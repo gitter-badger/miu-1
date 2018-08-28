@@ -154,6 +154,13 @@ impl TryFrom<D2Elt> for V2Elt {
     }
 }
 
+// Only use this when outputting stuff.
+impl Into<f64> for V2Elt {
+    fn into(self) -> f64 {
+        self.base as f64 + self.offset.into()
+    }
+}
+
 //----------------------------------------------------------
 // Arithmetic operations
 
