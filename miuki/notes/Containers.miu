@@ -1,0 +1,105 @@
+-- # NoImplicitPrelude
+
+operator (!?) where
+  fixity = Left
+  precedence = 9
+  op-name = "lookup"
+
+import Base.Maybe (Maybe)
+import Base.Stream (Stream)
+
+mod type SetSig : (Type -> ModType) -> Type -> ModType
+mod type SetSig C a where
+  has Eq-a : Eq a
+  has C-a : C a
+
+  -- type(visible)
+  type Set a
+
+  let empty : Set a
+  let singleton : a -> Set a
+  let fromStream : Stream a -> Set a
+
+  let insert : a -> Set a -> Set a
+  let insertWith : (a -> ~old : a -> a) -> a -> Set a -> Set a
+
+mod type MapSig : (Type -> Type -> ModType) -> Type -> Type -> ModType
+mod type MapSig C k v where
+  has Eq-k : Eq k
+  has C-k-v : C k v
+
+  type Map k v
+
+  -- | Creation
+  -- | =========
+  let empty : Map k v
+  let singleton : k -> v -> Map k v
+  let fromStream : Stream (k, v) -> Map k v
+
+  let insert : k -> v -> Map k v -> Map k v
+  let insert = insertWith const
+
+  let insertWith : (v -> ~old:v -> v) -> k -> v -> Map k v -> Map k v
+
+  -- | Querying
+  -- | ========
+  let size : Map k v -> Nat64
+
+  let isEmpty : Map k v -> Bool
+  let isEmpty m = size m == 0
+
+  let lookup : k -> Map k v -> Maybe v
+
+  let keys : Map k v -> Stream k
+  let values : Map k v -> Stream v
+  let toStream : Map k v -> Stream (k, v)
+
+-- type Ordering = Less | Equal | Greater
+--
+-- mod type OrdSig : Type -> ModType
+-- mod type OrdSig a where
+--   has Eq-a : Eq a
+--
+--   let compare : a -> a -> Ordering
+
+module RawNewSet (O : Ord a) where
+
+  let Eq-a = O : Eq a
+  let C-a = O
+
+  type Size = Nat64
+
+  data Set a = Tip | Bin !Size a (Set a) (Set a)
+
+  sig size : Set a -> Nat64
+  let size = \case { Tip -> 0; Bin sz _ _ _ -> sz }
+
+  let empty = Tip
+  let isEmpty = \case { Tip -> True; _ -> False }
+  -- ...
+
+implicit NewSet : Ord a -> SetSig Ord a
+implicit NewSet = RawNewSet
+
+visible Set a via NewSet (O : Ord a)
+
+-- Haskell union :: Ord a => Set a -> Set a -> Set a
+-- OCaml   union : { O : Ord } -> Set(O).t -> Set(O).t -> Set(O).t
+--
+-- Miu
+--         union : (S : SetSig Ord a) => S.Set a -> S.Set a -> S.Set a
+--         union = S.union
+--
+-- How it might work -
+--
+--   union : Ord a => Set a -> Set a -> Set a
+--
+-- desugars to
+--
+--  union : {generatedName : Ord a} -> Set a -> Set a Set a
+--
+-- import Containers (union)
+--
+-- union a b
+--
+--

@@ -1,4 +1,4 @@
-import Class.Functor (..)
+import Base.Functor (..)
 
 operator (<*<) =
   { fixity = Left
@@ -26,21 +26,12 @@ operator (>*-) =
 
 module Applicative where
 
--- This lawless type should probably be hidden inside another module?
--- Otherwise, in some cases, type inference will end up generating
--- foo : (Pointed f, Apply f) => .. for some local function, which isn't good..
--- We probably don't even need this if we're using profunctor optics.
--- See http://oleg.fi/gists/posts/2017-03-20-affine-traversal.html#s:1
-mod type Pointed f where
-  -- | Lift a value.
-  pure : a -> f a
-
 mod type Apply f where
   -- Syntactic sugar for
   -- has .. : Functor f
   has Functor f
 
-  --| Right to left sequential application.
+  -- | Right to left sequential application.
   (<*<) : f (a -> b) -> f a -> f b
   (<*<) = liftA2 identity
 
@@ -50,23 +41,19 @@ mod type Apply f where
   liftA2 g x y = g <|< x <*< y
 
 implicit type Applicative f where
-  -- Sugar for
-  -- has .. : Pointed f
-  -- has .. : Apply f
-  has Pointed f, Apply f
+  has Apply f
 
--- Transparent ascription, analogous to <: in OCaml 4.08 and above.
--- See https://blog.janestreet.com/plans-for-ocaml-408/
-implicit ApplicativeMaybe = MonadMaybe : Applicative Maybe
+  -- | Lift a value.
+  pure : a -> f a
 
 -- | Left to right sequential application.
-(>*>) : (M : Apply f) => f a -> f (a -> b) -> f b
-(>*>) = flip M.(<*<)
+let (>*>) : (M : Apply f) => f a -> f (a -> b) -> f b
+let (>*>) = flip M.(<*<)
 
--- | Sequence actions from left to right, discarding the left argument.
-(-*>) : (M : Apply f) => f a -> f b -> f b
-(-*>) = M.liftA2 (flip const)
+-- | Perform actions from left to right, discarding the left argument.
+let (-*>) : (M : Apply f) => f a -> f b -> f b
+let (-*>) = M.liftA2 (flip const)
 
--- | Sequence actions from left to right, discarding the right argument.
-(>*-) : (M : Apply f) => f a -> f b -> f a
-(>*-) = M.liftA2 const
+-- | Perform actions from left to right, discarding the right argument.
+let (>*-) : (M : Apply f) => f a -> f b -> f a
+let (>*-) = M.liftA2 const
