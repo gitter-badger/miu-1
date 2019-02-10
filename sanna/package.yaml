@@ -20,7 +20,7 @@ description:         A build system for the Miu programming language.
 
 dependencies:
 - base >= 4.11 && < 5
-- shake >= 0.16.4 && < 0.17
+- shake >= 0.16.4 && < 0.18
 - process >= 1.6 && < 1.7
 - directory >= 1.3 && < 1.4
 

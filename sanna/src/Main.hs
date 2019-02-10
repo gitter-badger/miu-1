@@ -159,6 +159,8 @@ miuShakeArgs root run
   where
     run' fs ts = run fs (map fromString ts)
 
+-----------------------------------------------------------------------------------
+
 miuMain :: Project -> IO ()
 miuMain p = do
   assert (proj p == Miu) (pure ())
