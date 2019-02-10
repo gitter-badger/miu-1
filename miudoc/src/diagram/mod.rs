@@ -3,7 +3,7 @@ mod v2;
 mod path;
 mod decoration;
 mod grid;
-mod to_svg;
+pub mod to_svg;
 
 #[allow(dead_code)]
 use self::grid::{Grid, find_paths, find_decorations};
@@ -13,10 +13,16 @@ use self::decoration::DecorationSet;
 use regex::Regex;
 
 #[derive(Debug)]
-struct Diagram {
+pub struct Diagram {
     grid: Grid,
     paths: PathSet,
     decorations: DecorationSet
+}
+
+impl Diagram {
+    pub fn num_paths(&self) -> usize {
+        self.paths.len()
+    }
 }
 
 fn equalize_line_lengths(_s: &mut str) {
@@ -38,8 +44,8 @@ fn mut_replace(body: &mut str, re: Regex, subst: String) {
     ();
 }
 
-#[allow(unused_variables)]
-fn parse_diagram(mut ss: String) -> Diagram {
+#[allow(unused)]
+pub fn parse_diagram(mut ss: String) -> Diagram {
     let s: &mut str = &mut ss;
     equalize_line_lengths(s);
 
@@ -62,41 +68,16 @@ fn parse_diagram(mut ss: String) -> Diagram {
 
     find_paths(&mut grid, &mut paths);
     find_decorations(&mut grid, &mut paths, &mut decorations);
-
     Diagram { grid, paths, decorations }
 }
 
+#[cfg(tests)]
 mod tests {
     use super::decoration::Angle;
-    use super::to_svg::ToSvg;
     use super::ASPECT;
-    use super::parse_diagram;
     use std::f64::consts::PI;
-
     #[test]
     fn markdeep_consistent_diagonal_angle() {
         assert!(Angle::DIAGONAL.get() == (f64::atan(1.0 / ASPECT as f64) * 180.0 / PI) as u16);
-    }
-    #[test]
-    fn no_overlapping_paths() {
-        let s = "---";
-        let diagram = parse_diagram(s.to_string());
-        assert!(diagram.paths.len() == 1);
-    }
-    #[test]
-    fn test_diagram_works() {
-        let s1 = " .---. \n";
-        let s2 = " |   | \n";
-        let s3 = " '-+-' \n";
-        let s4 = "   |   \n";
-        // let s1 = "o--\\n";
-        // let s2 = "   |\n";
-        // let s3 = "   v\n";
-        // let s4 = "   *\n";
-        let dia = parse_diagram(format!("{}{}{}{}", s1, s2, s3, s4));
-        println!("{:?}", dia);
-        for p in dia.paths.iter() {
-            println!("{}", p.to_svg());
-        }
     }
 }

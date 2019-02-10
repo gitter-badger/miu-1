@@ -4,8 +4,7 @@ use super::v2::*;
 use svg::node::element::Path as SvgPath;
 use svg::node::element::path::Data as SvgData;
 
-use std::collections::HashSet;
-use std::collections::hash_set;
+use std::slice;
 
 /// The field names have been kept short for easy comparison with the Markdeep
 /// source code.
@@ -22,9 +21,6 @@ pub struct Path {
     /// `- - -` vs `-----`.
     dashed: bool,
 }
-
-// Don't use EPSILON because we have proper types, not just number.
-// pub const EPSILON: f64 = 1E-6;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl Path {
@@ -46,15 +42,11 @@ impl Path {
 
     pub fn is_diagonal(&self) -> bool {
         let d = self.b - D2::from(self.a);
-        // Don't use EPSILON because we have proper types, not just number.
-        // ((d.y + d.x) as f64) < EPSILON
         d.x + d.y == D2Elt::ZERO
     }
 
     pub fn is_backdiag(&self) -> bool {
         let d = self.b - D2::from(self.a);
-        // Don't use EPSILON because we have proper types, not just number.
-        // (D2Elt::abs(d.y - d.x) as f64) < EPSILON
         d.x == d.y
     }
 
@@ -162,19 +154,21 @@ impl ToSvg for Path {
 
 #[derive(Debug)]
 pub struct PathSet {
-    set: HashSet<Path>,
+    // We stick to Markdeep's array style implementation (instead of say, using
+    // a HashSet) because the toSVG function in Markdeep prints out paths in
+    // order, which may be important in the SVG.
+    set: Vec<Path>,
 }
 
 impl PathSet {
     pub fn new() -> PathSet {
-        PathSet { set: HashSet::new() }
+        PathSet { set: Vec::new() }
     }
     pub fn len(&self) -> usize {
-        // Why is this function named len instead of size :(
         self.set.len()
     }
     pub fn insert(&mut self, p: Path) {
-        self.set.insert(p);
+        self.set.push(p);
     }
     pub fn iter<'a>(&'a self) -> PathSetIter<'a> {
         PathSetIter{iter: self.set.iter()}
@@ -212,8 +206,15 @@ impl PathSet {
     }
 }
 
+impl ToSvg for PathSet {
+    fn to_svg(&self) -> String {
+        // You would've thought this would be easy...
+        self.set.iter().map(|p| p.to_svg()).collect::<Vec<String>>().join("\n")
+    }
+}
+
 pub struct PathSetIter<'a> {
-    iter: hash_set::Iter<'a, Path>,
+    iter: slice::Iter<'a, Path>,
 }
 
 impl<'a> Iterator for PathSetIter<'a> {

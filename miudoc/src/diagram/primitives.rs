@@ -115,11 +115,14 @@ pub fn is_solid_bline(c: char) -> bool {
     c == '\\' || is_undirected_vertex(c)
 }
 
-#[test]
-fn markdeep_consistent_decoration_chars() {
-    let it = ARROW_HEAD_CHARS.iter().chain(&POINT_CHARS).chain(&JUMP_CHARS)
-        .chain(&GRAY_CHARS).chain(&TRI_CHARS);
-    for (i, &c) in it.enumerate() {
-        assert!(DECORATION_CHARS[i] == c);
+#[cfg(tests)]
+mod tests {
+    #[test]
+    fn markdeep_consistent_decoration_chars() {
+        let it = ARROW_HEAD_CHARS.iter().chain(&POINT_CHARS).chain(&JUMP_CHARS)
+            .chain(&GRAY_CHARS).chain(&TRI_CHARS);
+        for (i, &c) in it.enumerate() {
+            assert!(DECORATION_CHARS[i] == c);
+        }
     }
 }
