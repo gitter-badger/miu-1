@@ -8,7 +8,6 @@ Miu Language Informal Spec
 
 .. section-numbering::
 
-
 ************
 Introduction
 ************
@@ -36,15 +35,15 @@ Principles
             application (``|>``, ``>|>``),
             such that (comprehension/refinement)", ""
    "``,``", "sequence", ""
-   ``*``, "applicative (``>*>``), deref", ""
+   ``*``, "applicative (``>*>``)", ""
    ``;``, "monadic (``>;>``)", ""
    ``?``, "Holes (``?1``, ``?a``)", ""
-   ``&``, "and (``&``, ``&&``), borrow/address", ""
+   ``&``, "and (``&``, ``&&``), borrow", ""
    ``!``, "index (``!!``, ``!?``)", ""
    ``->``, "function arrow, then (if/match)", ""
-   ``<-``, "pattern", ""
+   ``->?``, "pattern", ""
    ``#``, "primitive", ""
-   ``@``, "optics?, type applications?", ""
+   ``@``, "optics?, type applications? memory address?", ""
    ``^``, "", ""
 
 ****************
@@ -177,10 +176,10 @@ literals::
     rec
     let in as and where
     type mod implicit
-    deriving pattern
+    deriving via pattern
     forall exists
     do if else match with
-    import operator
+    import operator visible
     foreign volatile
     atomic
 
@@ -193,16 +192,17 @@ literals::
     class instance
     functor comptime tailcall
     throw catch except
-    pat
+    pat pattern rule
+    lemma proof
 
   token backslash-op = "\\"
 
   token symbolic-keyword =
     | & \ . : .. ; = ..= ? ?? ! ~
     -> <- -o => <=
-    ( ) $(
+    ( ) $(             (| |)
     [ ] $[ [> [< >] <] [| |]
-    { } ${ {> {< >} <}
+    { } ${ {> {< >} <} {| |}
     -[ident]->
     =[ident]=>
 
@@ -360,19 +360,20 @@ terminology from Haskell)::
 ``if`` expressions are multi-way by default::
 
   if  a | b -> c
-      (Just x <- y) -> q x
+      (y ->? Just x) -> q x
       else -> z
 
 ``match`` expressions are very similar to ``if`` but have a "head" too::
 
   match x with
-    y & let (Just z <- w) -> q z
+    y & let (w ->? Just z) -> q z
     ..  -> p
 
 Operators are allowed as type variables. This can be handy when working with
 profunctors and similar higher-kinded type constructors. For example::
 
-  type Lens s t a b = forall (~>). Strong (~>) => (a ~> b) -> ((a, c) ~> (b, c))
+  type Lens s t a b =
+    forall (~~>). Strong (~~>) => (a ~~> b) -> ((a, c) ~~> (b, c))
 
 is arguably clearer than
 ::
@@ -412,48 +413,6 @@ Rewrite
 General rewrite rules like Haskell. It is the user's responsibility to make
 sure that the LHS and the RHS have the same semantics.
 
-Semantics
-=========
-
-Rewrite
--------
-
-The function implementation should be treated as a rewrite rule (with argument
-expressions directly substituted), instead of first evaluating the arguments
-and then calling the function. For example, boolean short-circuit operations
-can be implemented in a library using this technique::
-
-  --# Semantics {Rewrite}
-  (&&) x y = match x with
-    True  -> y
-    False -> False
-
-There is a semantic distinction between ``Semantics {Rewrite}`` and
-
-- A rewrite rule means that the LHS and RHS have identical semantics, and prefer
-  replacing the LHS with the RHS.
-- ``Semantics {Rewrite}`` means that we *define* the LHS to have the semantics of
-  the RHS, which may not be the case if the pragma is not supplied, as in the
-  above example.
-
-Idea: If one uses this in a module signature, then all modules with the same
-signature (or derived from it [1]) should have the same semantics. E.g. one
-may declare::
-
-  mod type Alternative f where
-    has Applicative f
-    empty : f a
-    --# Semantics {Rewrite}
-    (<|>) : f a -> f a -> f a
-
-  implicit AlternativeMaybe : Alternative Maybe where
-    has ApplicativeMaybe
-    empty = Nothing
-    (<|>) Nothing r = r
-    (<|>) l       _ = l
-
-[1] "derived" should be defined properly..
-
 *******************************
 Type definitions and signatures
 *******************************
@@ -469,12 +428,10 @@ We support units of measure like F#. They act like normal types except:
 
 Here are some examples::
 
-  --# Measure
-  type m
-  --# Measure
-  type s
-  --# Measure
-  type sqm = m ^ 2
+  type m : Measure
+  type s : Measure
+  type sqm : Measure = m ^ 2
+
   let triangleArea : F64 [m] -> F64 [m] -> F64 [sqm]
   let triangleArea base height = 0.5 * base * height
 
@@ -483,11 +440,11 @@ Here are some examples::
 
 Units are inferred generically only upon annotation::
 
-  let square1 (x : F64 [..]) = x * x
-  -- square1 : F64 ['u] -> F64 ['u] -> F64 ['u ^ 2]
+  let square1 (x : F64 ['u]) = x * x
+  -- square1 : F64 ['u] -> F64 ['u ^ 2]
 
   let square2 x = x * x
-  -- square2 : Multiply a => a -> a -> a
+  -- square2 : Multiply a a => a -> a
 
 Unit brackets bind more tightly than application::
 
@@ -545,7 +502,7 @@ Examples
   let printHi = do                     let printHi = do {
     let name <- getString                let name <- getString;
         msg = "Hi "                      let msg = "Hi " in
-    putStrLn (msg ++ name ++ "!")        putStrLn (msg ++ name ++ "!");
+    print (msg ++ name ++ "!")           print (msg ++ name ++ "!");
                                        }
 
 module declarations::
@@ -619,15 +576,17 @@ These should be easy to use and on by default:
   + rank-2 types (possibly rank-N types)
   + existential types
   + type families (with limited partial application?)
-  + functional dependencies (desugar to type families?)
-  + coercion
 
 * some form of linear/affine types
 
+* effect system
+  + From where? Eff, Koka/Purescript, Frank/Unison?
+
 Needs more thought/time/research:
 
+* coercion
+* functional dependencies (desugar to type families?)
 * levity polymorphism instead of sub-kinding?
-* effect system - we will certainly need something like this?
 * generative functors
 * first class modules
 * refinement types/dependent types - ease of integration
@@ -647,6 +606,12 @@ We allow for local defaulting for implicits::
   let sizeCmp = do
     let default BytecodeSizeOrd : Ord Bytecode
     assert (fastCode < slowCode)
+
+**********
+Namespaces
+**********
+
+[NOTE: This section serves as a scratch-pad for now.]
 
 *******
 Prelude

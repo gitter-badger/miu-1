@@ -16,7 +16,7 @@ Key takeaways:
 #. Understanding data dependencies is very important. Hack gets away with
    type-checking function bodies in parallel because it doesn't do function
    level inference.
-#. For performance one may have to inline/duplicate stuff. For example,
+#. For performance, one may have to inline/duplicate stuff. For example,
    Hack inlines declarations of superclasses into subclasses.
 #. One needs to carefully think about invariants that are needed. Josh talks
    about an issue where they didn't have the guarantee that if a write returns,
@@ -38,7 +38,13 @@ Thoughts on Miuki
    In case there are two type errors, one from the definition and one from
    a caller, then we can try to infer the type of the definition and issue
    a better error message (whether the signature needs to be changed).
-#. We may need to inline modules for performance. BENCHMARK THIS!
+
+   Look at SHErrLoc for details.
+
+   One big wrinkle with this plan is that complex signatures will usually
+   involve a bunch of implicits and OCaml/Scala do not infer implicit
+   parameters...
+
 #. There are a couple of options for parsing operators
 
    #. GHC-style tree rebalancing - this has the benefit that files can be
@@ -59,9 +65,6 @@ Thoughts on Miuki
       for a file once P1 has finished for files corresponding to imports. Note
       that this doesn't create a problem even if we allow cylic dependencies
       between files.
-
-      My hunch is that despite the data dependencies, the one-shot parsing
-      approach will be faster and we should use it.
 
       It would be nice to benchmark the difference, but it would probably take
       a substantial amount of effort to do so...
