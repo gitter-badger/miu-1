@@ -613,6 +613,23 @@ Namespaces
 
 [NOTE: This section serves as a scratch-pad for now.]
 
+OCaml doesn't have namespaces. Over the years, there have been a bunch of
+proposals.
+
+1. `Namespaces for OCaml: a proposal <http://gallium.inria.fr/~scherer/namespaces/spec.pdf>`_
+2. `A Proposal for Non-Intrusive Namespaces in OCaml <https://ocaml.org/meetings/ocaml/2014/ocaml2014_8.pdf>`_
+3. `lpw25/namespaces <https://github.com/lpw25/namespaces>`_
+
+It isn't entirely clear to me what the tradeoffs there are and what the exact
+design is.
+
+Some common sense thoughts -
+
+1. Namespaces should contain only other namespaces or modules. F# allows
+   namespaces to contain types but we shouldn't do that.
+2. Potentially be extensible across packages? This complicates name lookup, so
+   I'm not sure if this is a good idea.
+
 *******
 Prelude
 *******
