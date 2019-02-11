@@ -4,7 +4,7 @@ github:              "theindigamer/miu"
 license:             BSD3
 author:              "Varun Gandhi <theindigamer15@gmail.com>"
 maintainer:          "Varun Gandhi <theindigamer15@gmail.com>"
-copyright:           "2018 Varun Gandhi"
+copyright:           "2018-2019 Varun Gandhi"
 
 extra-source-files:
 - Readme.md
