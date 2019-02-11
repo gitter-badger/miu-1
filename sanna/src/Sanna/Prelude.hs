@@ -10,7 +10,7 @@ module Sanna.Prelude
   , module Data.Monoid
   , module Data.Maybe
   , module Data.String
-  , module Sanna.Prelude
+  , (|>), (>|>), (<|), (<|<), (.>), (<.), (<.:), unreachable
   ) where
 
 import Control.Applicative

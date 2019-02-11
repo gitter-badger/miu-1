@@ -7,7 +7,6 @@ import Development.Shake
 import Development.Shake.FilePath (joinPath, splitDirectories, (</>))
 import Development.Shake.Command (IsCmdArgument, CmdArguments)
 
-import Data.List (intercalate)
 import System.Console.GetOpt (ArgDescr (ReqArg), OptDescr (Option))
 import System.Directory (getCurrentDirectory)
 
@@ -64,8 +63,8 @@ data Project = Rooted
   }
 
 changeProject :: Project -> ProjectName -> Project
-changeProject Rooted{root} p
-  = Rooted{root, full = root </> relativePath p, proj = p}
+changeProject Rooted{root} p =
+  Rooted{root, full = root </> relativePath p, proj = p}
 
 newtype Flag = Flag String
 
@@ -86,7 +85,7 @@ instance IsString Target where
 
 type ACmdRunner a = Coercible a String => [CmdOption] -> a -> Action ()
 
-refreshRule :: Project -> (ACmdRunner ShellCmd) -> Rules ()
+refreshRule :: Project -> ACmdRunner ShellCmd -> Rules ()
 refreshRule Rooted{root} run =
   phony "refresh" <|
     run [Cwd (root </> "sanna")] "stack install"
@@ -95,10 +94,11 @@ fire :: FilePath -> a -> Action ()
 fire = (:[]) .> need .> const
 
 fwdCmd
-  :: (Coercible flags [String], IsCmdArgument args, Coercible shcmd String, CmdArguments ret)
+  :: ( Coercible flags [String], IsCmdArgument args
+     , Coercible shcmd String, CmdArguments ret)
   => flags -> args -> shcmd -> ret
-fwdCmd flags = \args shcmd ->
-  cmd args (coerce shcmd ++ ' ' : intercalate " " (coerce flags))
+fwdCmd flags args shcmd =
+  cmd args (coerce shcmd ++ ' ' : unwords (coerce flags))
 
 runRustSanityChecks :: Action ()
 runRustSanityChecks = getEnv "RUSTUP_TOOLCHAIN" >>= \case
@@ -131,6 +131,8 @@ cargoBoilerplate p@Rooted{full} flags targets = do
       phony "build" <| run [Cwd full] "cargo build"
       phony "test"  <| run [Cwd full] "cargo test"
       phony "clean" <| run [Cwd full] "cargo clean"
+{-# ANN cargoBoilerplate ("HLint: reduce duplication" :: String) #-}
+-- We can refactor common stuff later if needed.
 
 stackBoilerplate
   :: Project
@@ -139,12 +141,12 @@ stackBoilerplate
   -> Rules ([CmdOption] -> ShellCmd -> Action ())
 stackBoilerplate p@Rooted{full} flags targets = do
     let fwd_ = fwdCmd flags
-    if null targets then fwdToCargo fwd_ else want (coerce targets)
+    if null targets then fwdToStack fwd_ else want (coerce targets)
     refreshRule p fwd_
     basicRules fwd_
     pure fwd_
   where
-    fwdToCargo f = action (f [Cwd full] "stack")
+    fwdToStack f = action (f [Cwd full] "stack")
     basicRules run = do
       phony "build" <| run [Cwd full] "stack build"
       phony "test"  <| run [Cwd full] "stack test"
@@ -154,8 +156,8 @@ miuShakeArgs
   :: FilePath
   -> ([Flag] -> [Target] -> IO (Maybe (Rules ())))
   -> IO ()
-miuShakeArgs root run
-  = shakeArgsWith shakeOptions{shakeFiles = root </> ".sanna"} [fwdOpts] run'
+miuShakeArgs root run =
+  shakeArgsWith shakeOptions{shakeFiles = root </> ".sanna"} [fwdOpts] run'
   where
     run' fs ts = run fs (map fromString ts)
 
