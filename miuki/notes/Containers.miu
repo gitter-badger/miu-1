@@ -71,7 +71,7 @@ module RawNewSet (O : Ord a) where
 
   data Set a = Tip | Bin !Size a (Set a) (Set a)
 
-  sig size : Set a -> Nat64
+  let size : Set a -> Nat64
   let size = \case { Tip -> 0; Bin sz _ _ _ -> sz }
 
   let empty = Tip

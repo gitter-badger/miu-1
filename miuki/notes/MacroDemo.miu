@@ -1,0 +1,12 @@
+mod Power where
+    let square : Int -> Int
+    let square x = x * x
+
+    macro spower : Nat -> Int -> Expr Int
+    macro rec spower n x = if
+      n == 0         -> '1
+      n `mod` 2 == 0 -> '(square $(spower (n / 2) x))
+      else           -> '($x * $(spower (n - 1) x))
+
+    macro power : Nat -> Expr (Int -> Int)
+    macro power n = '(\x -> $(spower n 'x))
