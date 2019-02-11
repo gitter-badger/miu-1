@@ -52,8 +52,8 @@ let (>*>) = flip M.(<*<)
 
 -- | Perform actions from left to right, discarding the left argument.
 let (-*>) : (M : Apply f) => f a -> f b -> f b
-let (-*>) = M.liftA2 (flip const)
+let (-*>) = M.liftA2 (flip constant)
 
 -- | Perform actions from left to right, discarding the right argument.
 let (>*-) : (M : Apply f) => f a -> f b -> f a
-let (>*-) = M.liftA2 const
+let (>*-) = M.liftA2 constant
