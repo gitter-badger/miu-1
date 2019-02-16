@@ -22,7 +22,6 @@ pub struct TypeAlias {
     pub rhs: String,
 }
 
-
 /*
 
 pub Kw: Kw = {

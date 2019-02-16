@@ -1,7 +1,7 @@
-use ramp::Int;
 use mstring::MString;
-use span::{ByteOffset, Span, TokSpan};
 use plex::lexer;
+use ramp::Int;
+use span::{ByteOffset, Span, TokSpan};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Kw {

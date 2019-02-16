@@ -3,11 +3,11 @@
 extern crate miuki;
 extern crate ramp;
 
-use miuki::test;
 use miuki::lexer;
 use miuki::parser;
+use miuki::test;
 
-use std::path::{Path};
+use std::path::Path;
 
 // lalrpop_mod!(pub calc); // synthesized by LALRPOP
 
@@ -46,8 +46,8 @@ fn main() {
     );
     println!("{:?}", p.parse(l));
 
-    let s = std::fs::read_to_string(Path::new("test/generated/10k.miu"))
-        .unwrap();
+    let s =
+        std::fs::read_to_string(Path::new("test/generated/10k.miu")).unwrap();
     let l2 = lexer::Lexer::new(&s);
     let p2 = parser::ProgramParser::new();
     match p2.parse(l2) {
