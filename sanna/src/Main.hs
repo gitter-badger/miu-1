@@ -18,6 +18,7 @@ main = do
     Miu     -> miuMain p
     Miudoc  -> miudocMain p
     Miuki   -> miukiMain p
+    MiukiHs -> miukiHsMain p
     Miuspec -> miuspecMain p
     Sanna   -> sannaMain p
     Sojiro  -> sojiroMain p
@@ -52,6 +53,7 @@ relativePath = \case
   Miu     -> ""
   Miudoc  -> "miudoc"
   Miuki   -> "miuki"
+  MiukiHs -> "miuki-hs"
   Miuspec -> "miuspec"
   Sanna   -> "sanna"
   Sojiro  -> "sojiro"
@@ -168,8 +170,9 @@ miuMain p = do
   assert (proj p == Miu) (pure ())
   -- Makes sense to update the build system first :)
   sannaMain   (p `changeProject` Sanna)
-  -- Then the compiler
+  -- Then the compiler(s)
   miukiMain   (p `changeProject` Miuki)
+  miukiHsMain (p `changeProject` MiukiHs)
   -- Stuff which depends on the compiler
   miudocMain  (p `changeProject` Miudoc)
   miuspecMain (p `changeProject` Miuspec)
@@ -190,6 +193,11 @@ sojiroMain :: Project -> IO ()
 sojiroMain p@Rooted{root, proj} = do
   assert (proj == Sojiro) (pure ())
   miuShakeArgs root <| pure <. Just <. void <.: cargoBoilerplate p
+
+miukiHsMain :: Project -> IO ()
+miukiHsMain p@Rooted{root, full, proj} = do
+  assert (proj == MiukiHs) (pure ())
+  miuShakeArgs root <| pure <. Just <. void <.: stackBoilerplate p
 
 miukiMain :: Project -> IO ()
 miukiMain p@Rooted{root, full, proj} = do

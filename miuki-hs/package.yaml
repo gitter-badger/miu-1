@@ -1,10 +1,10 @@
-name:                sanna-lib
-version:             0.0.1.0
+name:                miuki-hs
+version:             0.1.0.0
 github:              "theindigamer/miu"
 license:             MPL-2.0
 author:              "Varun Gandhi <theindigamer15@gmail.com>"
 maintainer:          "Varun Gandhi <theindigamer15@gmail.com>"
-copyright:           "2018-2019 Varun Gandhi"
+copyright:           "2019 Varun Gandhi"
 
 extra-source-files:
 - Readme.md
@@ -16,13 +16,14 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         A build system for the Miu programming language.
+description:         A scratchpad for features in Miuki.
 
 dependencies:
 - base >= 4.11 && < 5
-- shake >= 0.16.4 && < 0.18
-- process >= 1.6 && < 1.7
-- directory >= 1.3 && < 1.4
+- megaparsec
+
+library:
+  source-dirs: src
 
 ghc-options:
 - -Wall
@@ -56,23 +57,19 @@ default-extensions:
 - MultiParamTypeClasses
 - GADTs
 
-library:
-  source-dirs:           src
-  exposed-modules:       Lib
-
 executables:
-  sanna:
+  miuki_hs:
     main:                Main.hs
-    source-dirs:         src
+    source-dirs:         app
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - sanna-lib
+    - miuki-hs
 
 tests:
-  sanna-test:
+  miuki-hs-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -80,4 +77,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - sanna-lib
+    - miuki-hs

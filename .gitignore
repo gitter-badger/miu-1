@@ -1,12 +1,11 @@
 miuki/bench/samples/*.miu
-
-sanna/*.cabal
 *.pdf
+**/Cargo.lock
+**/*.cabal
 
 **/.sanna/
 **/.stack-work/
 **/target/
-**/Cargo.lock
 
 **/.vscode
 **/.idea
