@@ -4,15 +4,32 @@ Some requirements are -
 * Allow specialization (if the user is willing to give up polymorphic recursion
   and separate compilation)
 
+(UX note: package/module documentation should make it clear whether the
+corresponding module permits specialization or not.)
+
+Note: The term "repr" is used as shorthand for "type representation" in this
+document. While we could just as well say "size" as that is the implementation
+we're planning to use, the detail that repr = size is not really relevant.
+
 Lowest three bits -
   * xx0 -> Int/Nat
   * 001 -> Pointer to GCed value
-  * 101 -> Maybe static data, pointers to Miu objects in C heap, bytearrays,
+  * 101 -> Maybe static data, pointers to Miu blocks in C heap, bytearrays,
            records with only unlifted types (bytearray like), or some
            combination thereof.
-  * x11 -> Object header
+  * x11 -> Block header
 
-Minimum object size = 1 word
+Blocks may be either stack allocated (using alloca if the repr is determined
+at runtime), or heap allocated. One problem with having unboxed fields is
+that we would like to prevent excess data copies. A "standard" solution to
+this problem would be having some kind of pointer/reference types. However,
+if you have an internal reference with a plain pointer, you can't know if
+an object is alive just by stepping through all the pointers you find, some
+extra book-keeping is needed. An alternative to this approach is having
+fat pointers which consist of a header pointer and an offset, but that creates
+a problem of memory usage (1 extra word per pointer).
+
+Minimum block size = 1 word
 
 There are two kinds -
 * ``Type``: I might contain pointers that the GC needs to inspect::
@@ -29,13 +46,13 @@ There are two kinds -
 
 * ``PrimType``: I do not contain pointers that the GC needs to check::
 
-    +-----------+-------------+-----------------------------------+------+
-    | Class     | Description | Examples                          | Size |
-    +-----------+-------------+-----------------------------------+------+
-    | Primitive |             | ``Int64#``, ``Int32x4#``, ``U8#`` | Any  |
-    +-----------+-------------+-----------------------------------+------+
-    | Composite | No header   | ``MkPoint# Int16# Int16#``        | Any  |
-    +-----------+-------------+-----------------------------------+------+
+    +-----------+-------------+-------------------------------------+------+
+    | Class     | Description | Examples                            | Size |
+    +-----------+-------------+-------------------------------------+------+
+    | Primitive |             | ``Int64#``, ``Int32x4#``, ``Nat8#`` | Any  |
+    +-----------+-------------+-------------------------------------+------+
+    | Composite | No header   | ``MkPoint# Int16# Int16#``          | Any  |
+    +-----------+-------------+-------------------------------------+------+
 
   We can have a built-in type constructor ``Array# : PrimType -> Type`` representing an
   a pointer to an array of primitive values::
@@ -49,12 +66,12 @@ There are two kinds -
           -> {| a : PrimArray t | inBounds i a |}
           -> {| a : PrimArray t | inBounds i a |}
 
-NOTE: Passing type sizes across module boundaries *implicitly* breaks separate
+NOTE: Passing reprs across module boundaries *implicitly* breaks separate
 compilation. In C/C++, if you want to access a struct in an unboxed fashion,
 you need to write the implementation in a header -- this is essentially the same
 problem.
 
-Memory layout of objects (inspired by that of OCaml & Sixten)::
+Memory layout of blocks (inspired by that of OCaml & Sixten)::
 
   -
                                                    +--- 2-bit "IsHeader" tag
@@ -71,26 +88,26 @@ NPF = non-pointy fields, NPA = non-pointy arrays
 Different tag options:
 * Ordinary tag for a sum type
 * Polymorphic variant tag
-  + Object size: metadata (including header)
+  + Block size: metadata (including header)
   + Next word is unique ID for variant name (probably a hash result).
   + Fields are stored in the body (no additional indirection unlike OCaml).
-* Fatpointer to array
-  + Object size: 2 words (including header)
-  + Next word is pointer to array
-  + metadata is interpreted as array size
+* Fatpointer to block
+  + Block size: 2 words (including header)
+  + Next word is pointer to block
+  + metadata is interpreted as offset in block
 * NPF NPA (a.k.a. bytearray-like)
-  + Object size: metadata (including header?)
+  + Block size: metadata (including header)
 * PF NPF NPA
   + Metadata interpreted as pair of sizes for PF and NPF + NPA respectively
     (how many bits each?)
-* PF PA NPF (or PF PA):
-  + Metadata interpreted as pair of sizes for PF + PA and NPF respectively
+* NPF PF PA
+  + Metadata interpreted as pair of sizes for NPF and PF + PA respectively
     (how many bits each?)
 
 Closures
 ========
 
-For small values, we should probably copy them into the object itself, and
+For small values, we should probably copy them into the block itself, and
 for large values, capture them by reference.
 
 Q: What about partial application?
@@ -120,7 +137,7 @@ Maybe attaching a vtable pointer is sufficient? Do we need to mess with the tag
 byte?
 
 One problem is that because of offset computation, "upcasting" would involve
-creating a copy of the data with an update vtable pointer. For example, consider
+creating a copy of the data with an updated vtable pointer. For example, consider
 the following made-up Haskell types
 
     type X = exists a. (Foo a, Bar a) => a
@@ -138,11 +155,10 @@ in the vtable. Hence, we need to perform at least 1 data copy when calling
 Higher-rank types
 =================
 
-
 Calling convention
 ==================
 
-One problem with all the size passing is increased register pressure.
+All the repr passing will probably create increased register pressure.
 We might want to follow a ghc/ocamlc style calling convention where there
 are no callee-save registers. Or try some other calling convention.
 
