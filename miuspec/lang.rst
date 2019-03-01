@@ -189,9 +189,11 @@ literals::
     then
     cotype
     data codata
+    constructor
     class instance
     functor comptime tailcall
     throw catch except
+    mut mutable
     pat pattern rule
     lemma proof
 
@@ -199,7 +201,7 @@ literals::
 
   token symbolic-keyword =
     | & \ . : .. ; = ..= ? ?? ! ~
-    -> <- -o => <=
+    -> <- -o => <= -!>
     ( ) $(             (| |)
     [ ] $[ [> [< >] <] [| |]
     { } ${ {> {< >} <} {| |}
