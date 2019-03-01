@@ -1,7 +1,12 @@
-**/target/
-**/Cargo.lock
 miuki/bench/samples/*.miu
+
 sanna/*.cabal
+*.pdf
+
 **/.sanna/
 **/.stack-work/
-*.pdf
+**/target/
+**/Cargo.lock
+
+**/.vscode
+**/.idea
