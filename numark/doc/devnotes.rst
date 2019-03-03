@@ -1,11 +1,3 @@
-miudoc
-######
-
-Status
-======
-
-Wishful thinking
-
 Ideas
 =====
 
@@ -18,6 +10,17 @@ Ideas
   - See themes `here <https://tmtheme-editor.herokuapp.com/#!/editor/theme/Agola%20Dark>`_.
   - Make themes freely available on userstyles.org so that people can save
     defaults if they wish. Don't use cookies for that.
+
+* Choice of default markup language
+
+  - Use cases:
+    + Short documentation comments - Markdown is really good here.
+    + Longer tutorials written in literate style - Markdeep is really good here
+      if you don't want customizability in a platform-agnostic way: just use
+      HTML.
+    + If people really like it and the ecosystem allows, they'll want to use it
+      to create slides, notes, blogs and even books!
+  - Customizability:
 
 * From Haddock
 
@@ -46,8 +49,8 @@ Ideas
 
 * Flexibility
 
-  - Modular over input formats - RST (primary), or Markdown (may not be able
-    to support all features).
+  - Modular over input formats - Numark (placeholder custom markup language), or
+    Markdown (may not be able to support all features).
   - Modular over documentation style - reference, tutorial, book
   - Modular over presentation style - web, handout, slides
   - Can be used as a library if someone else wants to set up their own thing.
@@ -77,13 +80,3 @@ Misc:
 
 * Bay area Rust talk: https://air.mozilla.org/rust-meetup-december-2013/
   (video can be downloaded!)
-
-License
-=======
-
-``miudoc`` is primarily distributed under the BSD-3-Clause license. See `License`.
-
-The module ``diagram`` and its submodules are a derivative work of
-`Markdeep <https://casual-effects.com/markdeep/>`_ .
-
-The BSD-2-Clause license for ``Markdeep`` is included under ``licenses/``.

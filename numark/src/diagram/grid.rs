@@ -1,5 +1,5 @@
 // TODO: Everything is marked as pub for now but that should be changed later.
-// NOTE: Comments marked with [MM] have bee directly copied from Markdeep's source
+// NOTE: Comments marked with [MM] have been directly copied from Markdeep's source
 // code (written by Morgan McGuire).
 
 use super::decoration::*;

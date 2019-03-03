@@ -7,6 +7,7 @@ import Development.Shake
 import Development.Shake.FilePath (joinPath, splitDirectories, (</>))
 import Development.Shake.Command (IsCmdArgument, CmdArguments)
 
+import Text.Read (readMaybe)
 import System.Console.GetOpt (ArgDescr (ReqArg), OptDescr (Option))
 import System.Directory (getCurrentDirectory)
 
@@ -20,6 +21,7 @@ main = do
     Miuki   -> miukiMain p
     MiukiHs -> miukiHsMain p
     Miuspec -> miuspecMain p
+    Numark  -> numarkMain p
     Sanna   -> sannaMain p
     Sojiro  -> sojiroMain p
 
@@ -36,17 +38,29 @@ getProject
            _ -> unreachable
   where
     identifyLast root = \case
-      []          -> Rooted { root, full = root              , proj = Miu     }
-      "miudoc" :_ -> Rooted { root, full = root </> "miudoc" , proj = Miudoc  }
-      "miuki"  :_ -> Rooted { root, full = root </> "miuki"  , proj = Miuki   }
-      "miuspec":_ -> Rooted { root, full = root </> "miuspec", proj = Miuspec }
-      "sanna"  :_ -> Rooted { root, full = root </> "sanna"  , proj = Sanna   }
-      "sojiro" :_ -> Rooted { root, full = root </> "sojiro" , proj = Sojiro  }
-      _ -> error "Not sure which project you're trying to build.\n\
-                 \Maybe update the build system to handle it?"
+      []  -> Rooted { root, full = root              , proj = Miu     }
+      s:_
+        | Just proj <- readMaybe s
+          -> Rooted { root, full = root </> s, proj }
+      ps  -> error $
+        "Not sure which project you're trying to build.\n\
+        \Maybe update the build system to handle it?\n\
+        \Here's the path I found\n\n\t" ++ show ps
 
-data ProjectName = Miu | Miudoc | Miuki | Miuspec | Sanna | Sojiro
+data ProjectName = Miu | Miudoc | Miuki | MiukiHs | Miuspec | Numark | Sanna | Sojiro
   deriving Eq
+
+instance Read ProjectName where
+  readsPrec _ s = case s of
+    'm':'i':'u':'k':'i':'h':'s':rest -> [(MiukiHs, rest)]
+    'm':'i':'u':'k':'i'        :rest -> [(Miuki  , rest)]
+    'm':'i':'u':'s':'p':'e':'c':rest -> [(Miuspec, rest)]
+    'm':'i':'u':'d':'o':'c'    :rest -> [(Miudoc , rest)]
+    'm':'i':'u'                :rest -> [(Miu    , rest)]
+    'n':'u':'m':'a':'r':'k'    :rest -> [(Numark , rest)]
+    's':'a':'n':'n':'a'        :rest -> [(Sanna  , rest)]
+    's':'o':'j':'i':'r':'o'    :rest -> [(Sojiro , rest)]
+    _ -> []
 
 relativePath :: ProjectName -> FilePath
 relativePath = \case
@@ -55,6 +69,7 @@ relativePath = \case
   Miuki   -> "miuki"
   MiukiHs -> "miuki-hs"
   Miuspec -> "miuspec"
+  Numark  -> "numark"
   Sanna   -> "sanna"
   Sojiro  -> "sojiro"
 
@@ -130,7 +145,7 @@ cargoBoilerplate p@Rooted{full} flags targets = do
   where
     fwdToCargo f = action (f [Cwd full] "cargo")
     basicRules run = do
-      phony "build" <| run [Cwd full] "cargo build"
+      phony "build" <| run [Cwd full] "cargo build --color=always"
       phony "test"  <| run [Cwd full] "cargo test"
       phony "clean" <| run [Cwd full] "cargo clean"
 {-# ANN cargoBoilerplate ("HLint: reduce duplication" :: String) #-}
@@ -179,25 +194,28 @@ miuMain p = do
   -- The server last as it will probably end up depending on everything else
   sojiroMain  (p `changeProject` Sojiro)
 
-sannaMain :: Project -> IO ()
-sannaMain p@Rooted{root, proj} = do
-  assert (proj == Sanna) (pure ())
+defaultHaskellMain :: Project -> IO ()
+defaultHaskellMain p@Rooted{root} =
   miuShakeArgs root <| pure <. Just <. void <.: stackBoilerplate p
+
+defaultRustMain :: Project -> IO ()
+defaultRustMain p@Rooted{root} =
+  miuShakeArgs root <| pure <. Just <. void <.: cargoBoilerplate p
+
+sannaMain :: Project -> IO ()
+sannaMain p = assert (proj p == Sanna) defaultHaskellMain p
+
+numarkMain :: Project -> IO ()
+numarkMain p = assert (proj p == Numark) defaultRustMain p
 
 miudocMain :: Project -> IO ()
-miudocMain p@Rooted{root, proj} = do
-  assert (proj == Miudoc) (pure ())
-  miuShakeArgs root <| pure <. Just <. void <.: cargoBoilerplate p
+miudocMain p = assert (proj p == Miudoc) defaultRustMain p
 
 sojiroMain :: Project -> IO ()
-sojiroMain p@Rooted{root, proj} = do
-  assert (proj == Sojiro) (pure ())
-  miuShakeArgs root <| pure <. Just <. void <.: cargoBoilerplate p
+sojiroMain p = assert (proj p == Sojiro) defaultRustMain p
 
 miukiHsMain :: Project -> IO ()
-miukiHsMain p@Rooted{root, full, proj} = do
-  assert (proj == MiukiHs) (pure ())
-  miuShakeArgs root <| pure <. Just <. void <.: stackBoilerplate p
+miukiHsMain p = assert (proj p == MiukiHs) defaultHaskellMain p
 
 miukiMain :: Project -> IO ()
 miukiMain p@Rooted{root, full, proj} = do

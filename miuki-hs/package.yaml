@@ -21,6 +21,11 @@ description:         A scratchpad for features in Miuki.
 dependencies:
 - base >= 4.11 && < 5
 - megaparsec
+- text
+- containers
+- unordered-containers
+- hashable
+- vector
 
 library:
   source-dirs: src

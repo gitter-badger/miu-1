@@ -1,0 +1,23 @@
+[package]
+name = "numark"
+version = "0.1.0"
+authors = ["Varun Gandhi <theindigamer15@gmail.com>"]
+edition = "2018"
+
+[[bin]]
+name = "numark"
+path = "src/main.rs"
+
+[dependencies]
+# TODO: Put proper versions here...
+regex = "*"
+unicode-width = "*"
+fnv = "*"
+svg = "*"
+
+[dev-dependencies]
+proptest = "*"
+
+[[test]]
+path = "test/spec.rs"
+name = "default"

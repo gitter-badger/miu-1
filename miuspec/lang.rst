@@ -640,4 +640,9 @@ Prelude
 of the Prelude and what things are required from alternate preludes. It
 shouldn't have anything that would fit better in the library documentation.]
 
-Some amount of built-in support for (profunctor) optics?
+::
+  type Monad (m : Type -> Type) = {
+     include (Applicative m ⊔ Bind m)
+     val leftIdentity : (a : Type) -> (x : a) -> Lemma {| bind (pure x) f == f x |}
+     val rightIdentity : (a : Type) -> (x : a) -> Lemma {| bind x pure == x |}
+   };
