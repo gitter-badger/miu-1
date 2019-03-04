@@ -16,6 +16,7 @@ Note: This document heavily borrows from the nicely written
 `F# language spec <https://fsharp.org/specs/language-spec/>`_.
 
 Suggested emojis: U+1f326 🌦 or U+1f36d 🍭 (once/if we have linear types!).
+Suggested colors: Primary is #ffb9bd (light pink). See `mycolor.space <https://mycolor.space/>`_ or a similar site for full palettes!
 
 Principles
 ==========
