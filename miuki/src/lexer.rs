@@ -78,7 +78,7 @@ pub enum SymKw {
     Grave,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum CtxKw {
     Alias,
     Family,
@@ -86,13 +86,13 @@ pub enum CtxKw {
     Default,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum CtxSymKw {
     EqualsX2,
     Implies,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Token {
     Whitespace,
     Newline,
@@ -148,7 +148,7 @@ pub enum Precedence {
     P14,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Quoter(MString);
 
 #[derive(Debug, Copy, Clone)]

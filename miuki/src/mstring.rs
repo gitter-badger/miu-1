@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MString(String);
 
 impl<'a> From<&'a str> for MString {
