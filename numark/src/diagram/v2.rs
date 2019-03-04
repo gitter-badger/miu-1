@@ -71,9 +71,9 @@ impl Sub<Offset> for Offset {
 
     fn sub(self, x: Offset) -> D2Elt {
         let z = self.o as i32 - x.o as i32;
-        let base = z.div_euc(Self::DIVS as i32) as i64;
+        let base = z.div_euclid(Self::DIVS as i32) as i64;
         let offset = Offset {
-            o: z.mod_euc(Self::DIVS as i32) as u8,
+            o: z.rem_euclid(Self::DIVS as i32) as u8,
         };
         D2Elt { base, offset }
     }

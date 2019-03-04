@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use diagram::primitives::*;
-use diagram::v2::{V2, IsV2, V2Elt};
+use super::primitives::*;
+use super::v2::{V2, IsV2, V2Elt};
 
 use std::iter;
 use std::slice;
@@ -54,14 +54,14 @@ impl Angle {
 impl Add for Angle {
     type Output = Angle;
     fn add(self, other: Angle) -> Angle {
-        Angle {a: self.get().wrapping_add(other.get()).mod_euc(Angle::DIVS)}
+        Angle {a: self.get().wrapping_add(other.get()).rem_euclid(Angle::DIVS)}
     }
 }
 
 impl Sub for Angle {
     type Output = Angle;
     fn sub(self, other: Angle) -> Angle {
-        Angle {a: self.get().wrapping_sub(other.get()).mod_euc(Angle::DIVS)}
+        Angle {a: self.get().wrapping_sub(other.get()).rem_euclid(Angle::DIVS)}
     }
 }
 
