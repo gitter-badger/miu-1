@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 use std::convert::*;
 use std::num::TryFromIntError;
 use std::ops::*;
@@ -189,7 +193,7 @@ impl AddAssign<Offset> for V2Elt {
 }
 
 // I don't really like this implementation but I'm trying to stick to
-// Markdeep's logic closely, so shit is what it is...
+// Markdeep's logic closely, so ...
 impl Sub<Offset> for V2Elt {
     type Output = V2Elt;
     fn sub(self, x: Offset) -> Self::Output {
