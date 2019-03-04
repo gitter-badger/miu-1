@@ -143,8 +143,8 @@ impl ToSvg for Path {
             .move_to(self.a.as_tuple());
         d = if self.is_curved() {
                 d.cubic_curve_to(self.c.unwrap().as_tuple())
-                    .cubic_curve_to(self.d.unwrap().as_tuple())
-                    .cubic_curve_to(self.b.as_tuple())
+                 .cubic_curve_to(self.d.unwrap().as_tuple())
+                 .cubic_curve_to(self.b.as_tuple())
             } else {
                 d.line_to(self.b.as_tuple())
             };

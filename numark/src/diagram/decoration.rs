@@ -3,7 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::primitives::*;
-use super::v2::{V2, IsV2, V2Elt};
+use super::to_svg::ToSvg;
+use super::v2::{V2, IsV2, V2Elt, IsV2Elt};
 
 use std::iter;
 use std::slice;
@@ -37,14 +38,14 @@ impl Angle {
     pub const A180: Angle = Angle { a: 180 };
     pub const A270: Angle = Angle { a: 270 };
 
-    pub fn get(&self) -> u16 {
-        self.a
-    }
-
     pub fn ratio(n: u16, d: u16) -> Angle {
         let divs = Angle::DIVS;
         assert!(0 < n && n < d && d <= divs && divs % d == 0);
         Angle {a: divs/d * n}
+    }
+
+    pub fn to_degrees(&self) -> f64 {
+        self.a as f64
     }
 }
 
@@ -54,14 +55,14 @@ impl Angle {
 impl Add for Angle {
     type Output = Angle;
     fn add(self, other: Angle) -> Angle {
-        Angle {a: self.get().wrapping_add(other.get()).rem_euclid(Angle::DIVS)}
+        Angle {a: self.a.wrapping_add(other.a).rem_euclid(Angle::DIVS)}
     }
 }
 
 impl Sub for Angle {
     type Output = Angle;
     fn sub(self, other: Angle) -> Angle {
-        Angle {a: self.get().wrapping_sub(other.get()).rem_euclid(Angle::DIVS)}
+        Angle {a: self.a.wrapping_sub(other.a).rem_euclid(Angle::DIVS)}
     }
 }
 
@@ -98,6 +99,107 @@ impl Decoration {
 pub struct DecorationSet {
     arrows: Vec<Decoration>,
     points: Vec<Decoration>,
+}
+
+impl ToSvg for DecorationSet {
+
+    fn to_svg(&self) -> String {
+        use super::v2::{V2EltBase, Offset};
+        use super::{SCALE, ASPECT, STROKE_WIDTH};
+        use super::to_svg::ToSvg;
+
+        use svg::node::element;
+
+        let mut doc = svg::Document::new();
+
+        impl V2 {
+            fn x_svg(&self) -> f64 {
+                self.x.to_f64() * SCALE as f64
+            }
+            fn y_svg(&self) -> f64 {
+                self.y.to_f64() * (SCALE * ASPECT) as f64
+            }
+            fn to_svg(&self) -> String {
+                format!("{},{}", self.x_svg(), self.y_svg())
+            }
+        }
+
+        for decoration in self.arrows.iter().chain(self.points.iter()) {
+            // Corresponds to C in Markdeep
+            let pos = decoration.pos;
+            if is_jump(decoration.type_) {
+                // [MM] Slide jumps
+                let dx = |p: super::v2::V2| {
+                    let tq = Offset::THREE_QUARTER;
+                    if decoration.type_ == ')' {p.rt_n(tq)} else {p.lf_n(tq)}
+                };
+                let up = pos.up_n(Offset::HALF);
+                let dn = pos.dn_n(Offset::HALF);
+                let side_up = dx(up);
+                let side_dn = dx(dn);
+                let d = element::path::Data::new().move_to(dn.as_tuple())
+                    .cubic_curve_to(side_dn.as_tuple())
+                    .cubic_curve_to(side_up.as_tuple())
+                    .cubic_curve_to(up.as_tuple());
+                let p = element::Path::new().set("fill", "none").set("d", d);
+                doc = doc.add(p);
+            } else if is_point(decoration.type_) {
+                let cls = if decoration.type_ == '*' { "closeddot" } else { "opendot" };
+                let c = element::Circle::new()
+                    .set("cx", pos.x_svg())
+                    .set("cy", pos.y_svg())
+                    .set("r", SCALE - STROKE_WIDTH)
+                    .set("class", cls);
+                doc = doc.add(c);
+            } else if let Some(i) = is_gray_at(decoration.type_) {
+                let shade = ((&GRAY_CHARS.len() - 1 - i) as f64 * 63.75).round();
+                let pos = pos.lf_n(Offset::HALF).up_n(Offset::HALF);
+                let r = element::Rectangle::new()
+                    .set("x", pos.x_svg())
+                    .set("y", pos.y_svg())
+                    .set("width", SCALE)
+                    .set("height", SCALE * ASPECT)
+                    .set("style", "stroke:none")
+                    .set("fill", format!("rgb({0},{0},{0})", shade));
+                doc = doc.add(r);
+            } else if let Some(i) = is_tri_at(decoration.type_) {
+                // [MM] 30-60-90 triangle
+                // TODO: Finish porting triangle code.
+                assert!(0 <= i && i <= 3);
+                let i = i as V2EltBase;
+                let ys = (- (i >> 1)).to_v2elt() + Offset::HALF.to_v2elt();
+                let xs =
+                    if ys.signum() > 0 { - (i & 1) } else { -1 + (i & 1) }.to_v2elt()
+                    + Offset::HALF.to_v2elt();
+                let tip = (pos.x + xs, pos.y.force_sub(ys)).to_v2();
+                let up  = (pos.x + xs, pos.y + ys).to_v2();
+                let dn  = (pos.x.force_sub(ys), pos.y + ys).to_v2();
+                let p = svg::node::element::Polygon::new()
+                    .set("points", format!("{} {} {}",
+                                           tip.to_svg(),
+                                           up.to_svg(),
+                                           dn.to_svg()))
+                    .set("style", "stroke:none");
+                doc = doc.add(p);
+            } else {
+                assert!(is_arrow_head(decoration.type_));
+                let tip = pos.rt();
+                let up  = (pos.x - Offset::HALF, pos.y - Offset::ratio(7, 20)).to_v2();
+                let dn  = (pos.x - Offset::HALF, pos.y + Offset::ratio(7, 20)).to_v2();
+                let p = svg::node::element::Polygon::new()
+                    .set("points", format!("{} {} {}",
+                                           tip.to_svg(),
+                                           up.to_svg(),
+                                           dn.to_svg()))
+                    .set("style", "stroke:none")
+                    .set("transform", format!("rotate({},{})",
+                                              decoration.angle.to_degrees(),
+                                              pos.to_svg()));
+                doc = doc.add(p);
+            }
+        }
+        format!("{}", doc)
+    }
 }
 
 impl DecorationSet {

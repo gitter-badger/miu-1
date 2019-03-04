@@ -19,7 +19,7 @@ use regex::Regex;
 #[derive(Debug)]
 pub struct Diagram {
     grid: Grid,
-    paths: PathSet,
+    pub paths: PathSet,
     decorations: DecorationSet
 }
 
@@ -42,6 +42,10 @@ const SCALE: u32 = 8;
 // result to account for the aspect ratio of text files. This
 // MUST be 2.
 const ASPECT: u32 = 2;
+
+// TODO(varun): What does this do exactly?
+// [MM] In pixels of lines in diagrams
+const STROKE_WIDTH: u32 = 2;
 
 #[allow(unused_variables)]
 fn mut_replace(body: &mut str, re: Regex, subst: String) {

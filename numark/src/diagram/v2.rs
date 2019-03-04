@@ -24,10 +24,12 @@ pub struct Offset {
 
 impl Offset {
     pub const DIVS: u8 = 20;
+    /// Not 20 because we do inclusive checks.
     pub const MAX: Offset = Offset { o: 19 };
     pub const ZERO: Offset = Offset { o: 0 };
     pub const QUARTER: Offset = Offset { o: 5 };
     pub const HALF: Offset = Offset { o: 10 };
+    pub const THREE_QUARTER: Offset = Offset { o: 15 };
 
     pub fn get(&self) -> u8 {
         self.o
@@ -35,7 +37,8 @@ impl Offset {
 
     pub fn ratio(n: u8, d: u8) -> Offset {
         let divs = Offset::DIVS;
-        assert!(0 < n && n < d && d <= divs && divs % d == 0);
+        assert!(d <= divs && divs % d == 0);
+        assert!(0 < n && n < d);
         Offset {o: divs/d * n}
     }
 }
@@ -118,6 +121,20 @@ impl V2Elt {
 
     pub fn is_exact(&self) -> bool {
         self.offset == Offset::ZERO
+    }
+
+    pub fn to_f64(self) -> f64 {
+        self.into()
+    }
+
+    pub fn signum(&self) -> i8 {
+        if self.base < 0 {
+            -1
+        } else if self.base == 0 && self.offset == Offset::ZERO {
+            0
+        } else {
+            1
+        }
     }
 }
 
@@ -212,7 +229,7 @@ impl SubAssign<Offset> for V2Elt {
     }
 }
 
-impl Add<V2Elt> for V2Elt {
+impl Add for V2Elt {
     type Output = V2Elt;
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -379,7 +396,7 @@ impl V2 {
 impl TryFrom<D2> for V2 {
     type Error = ();
     fn try_from(d: D2) -> Result<V2, Self::Error> {
-        if d.x < V2Elt::MAX.into() && d.y < V2Elt::MAX.into() {
+        if d.x <= V2Elt::MAX.into() && d.y <= V2Elt::MAX.into() {
             Ok(d.force_into())
         } else {
             Err(())

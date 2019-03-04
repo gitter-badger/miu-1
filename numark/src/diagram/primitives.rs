@@ -39,8 +39,13 @@ pub const DECORATION_CHARS: [char; 17] = [
     'o', '*',
     // JUMP_CHARS
     '(', ')',
+    // NOTE: Markdeep uses the commented out order. I think there's a bug in
+    // that so I used a different sequence. Lighter shades come first.
+    // // GRAY_CHARS
+    // '\u{2591}', '\u{2592}', '\u{2593}', '\u{2594}', '\u{2589}',
     // GRAY_CHARS
-    '\u{2591}', '\u{2592}', '\u{2593}', '\u{2594}', '\u{2589}',
+    //  ▔▔▔▔       ░░░░        ▒▒▒▒        ▓▓▓▓        ▉▉▉▉
+    '\u{2594}','\u{2591}', '\u{2592}', '\u{2593}', '\u{2589}',
     // TRI_CHARS
     '\u{25E2}', '\u{25E3}', '\u{25E4}', '\u{25E5}'
 ];
@@ -83,20 +88,34 @@ pub fn is_vertex_or_right_decoration(c: char) -> bool {
     is_vertex(c) || c == '>' || is_point(c)
 }
 
-// GRAY[i] is the Unicode block character for (i+1)/4 level gray
 pub const GRAY_CHARS: [char; 5] =
-    ['\u{2591}', '\u{2592}', '\u{2593}', '\u{2594}', '\u{2589}'];
+    // NOTE: Markdeep uses the commented out order. I think there's a bug in
+    // that so I used a different sequence. Lighter shades come first.
+    // // GRAY_CHARS
+    // '\u{2591}', '\u{2592}', '\u{2593}', '\u{2594}', '\u{2589}',
+    // GRAY_CHARS
+    //   ▔▔▔▔       ░░░░        ▒▒▒▒        ▓▓▓▓        ▉▉▉▉
+    ['\u{2594}','\u{2591}', '\u{2592}', '\u{2593}', '\u{2589}'];
 
 pub fn is_gray(c: char) -> bool {
     contains(&GRAY_CHARS, c)
 }
 
+pub fn is_gray_at(c: char) -> Option<usize> {
+    GRAY_CHARS.iter().position(|&z| z == c)
+}
+
 // TRI[i] is a right-triangle rotated by 90*i
 pub const TRI_CHARS: [char; 4] =
+    //    ◢           ◣           ◤           ◥
     ['\u{25E2}', '\u{25E3}', '\u{25E4}', '\u{25E5}'];
 
 pub fn is_tri(c: char) -> bool {
     contains(&TRI_CHARS, c)
+}
+
+pub fn is_tri_at(c: char) -> Option<usize> {
+    TRI_CHARS.iter().position(|&z| z == c)
 }
 
 pub fn is_solid_hline(c: char) -> bool {

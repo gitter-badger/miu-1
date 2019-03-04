@@ -1,6 +1,6 @@
-extern crate libmiudoc;
+extern crate numark;
 
-use libmiudoc::diagram;
+use numark::diagram;
 
 #[cfg(tests)]
 mod diagram_spec;
