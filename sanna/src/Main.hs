@@ -15,19 +15,11 @@ main :: IO ()
 main = do
   cwd <- getCurrentDirectory
   let p = getProject cwd
-  case proj p of
-    Miu     -> miuMain p
-    Miudoc  -> miudocMain p
-    Miuki   -> miukiMain p
-    MiukiHs -> miukiHsMain p
-    Miuspec -> miuspecMain p
-    Numark  -> numarkMain p
-    Sanna   -> sannaMain p
-    Sojiro  -> sojiroMain p
+  mainFor (name p) p
 
 getProject :: FilePath -> Project
-getProject
-  =  splitDirectories
+getProject =
+     splitDirectories
   .> break (== "miu")
   .> \(joinPath -> pre, post) ->
        let root = pre </> "miu" in
@@ -38,28 +30,31 @@ getProject
            _ -> unreachable
   where
     identifyLast root = \case
-      []  -> Rooted { root, full = root              , proj = Miu     }
+      []  -> Rooted {root, full = root, name = Miu, primaryProject = Miu}
       s:_
-        | Just proj <- readMaybe s
-          -> Rooted { root, full = root </> s, proj }
+        | Just name <- readMaybe s
+          -> Rooted {root, full = root </> s, name, primaryProject = name}
       ps  -> error $
         "Not sure which project you're trying to build.\n\
         \Maybe update the build system to handle it?\n\
         \Here's the path I found\n\n\t" ++ show ps
 
 data ProjectName = Miu | Miudoc | Miuki | MiukiHs | Miuspec | Numark | Sanna | Sojiro
-  deriving Eq
+  deriving (Bounded, Enum, Eq)
+
+allProjects :: [ProjectName]
+allProjects = [Miu .. Sojiro]
 
 instance Read ProjectName where
   readsPrec _ s = case s of
-    'm':'i':'u':'k':'i':'h':'s':rest -> [(MiukiHs, rest)]
-    'm':'i':'u':'k':'i'        :rest -> [(Miuki  , rest)]
-    'm':'i':'u':'s':'p':'e':'c':rest -> [(Miuspec, rest)]
-    'm':'i':'u':'d':'o':'c'    :rest -> [(Miudoc , rest)]
-    'm':'i':'u'                :rest -> [(Miu    , rest)]
-    'n':'u':'m':'a':'r':'k'    :rest -> [(Numark , rest)]
-    's':'a':'n':'n':'a'        :rest -> [(Sanna  , rest)]
-    's':'o':'j':'i':'r':'o'    :rest -> [(Sojiro , rest)]
+    'm':'i':'u':'k':'i':'-':'h':'s':rest -> [(MiukiHs, rest)]
+    'm':'i':'u':'k':'i'            :rest -> [(Miuki  , rest)]
+    'm':'i':'u':'s':'p':'e':'c'    :rest -> [(Miuspec, rest)]
+    'm':'i':'u':'d':'o':'c'        :rest -> [(Miudoc , rest)]
+    'm':'i':'u'                    :rest -> [(Miu    , rest)]
+    'n':'u':'m':'a':'r':'k'        :rest -> [(Numark , rest)]
+    's':'a':'n':'n':'a'            :rest -> [(Sanna  , rest)]
+    's':'o':'j':'i':'r':'o'        :rest -> [(Sojiro , rest)]
     _ -> []
 
 relativePath :: ProjectName -> FilePath
@@ -76,18 +71,16 @@ relativePath = \case
 data Project = Rooted
   { root :: FilePath
   , full :: FilePath
-  , proj :: ProjectName
+  , name :: ProjectName
+  , primaryProject :: ProjectName
   }
 
 changeProject :: Project -> ProjectName -> Project
-changeProject Rooted{root} p =
-  Rooted{root, full = root </> relativePath p, proj = p}
+changeProject Rooted{root, primaryProject} p =
+  Rooted{root, full = root </> relativePath p, name = p, primaryProject}
 
 newtype Flag = Flag String
-
-fwdOpts :: OptDescr (Either a Flag)
-fwdOpts = Option "f" ["fwd"] (ReqArg (Right . Flag) "FLAGS")
-  "Forward arguments to the underlying command."
+  deriving Eq
 
 newtype ShellCmd = ShellCmd String
 
@@ -100,23 +93,6 @@ newtype Target = Target String
 instance IsString Target where
   fromString = coerce
 
-type ACmdRunner a = Coercible a String => [CmdOption] -> a -> Action ()
-
-refreshRule :: Project -> ACmdRunner ShellCmd -> Rules ()
-refreshRule Rooted{root} run =
-  phony "refresh" <|
-    run [Cwd (root </> "sanna")] "stack install"
-
-fire :: FilePath -> a -> Action ()
-fire = (:[]) .> need .> const
-
-fwdCmd
-  :: ( Coercible flags [String], IsCmdArgument args
-     , Coercible shcmd String, CmdArguments ret)
-  => flags -> args -> shcmd -> ret
-fwdCmd flags args shcmd =
-  cmd args (coerce shcmd ++ ' ' : unwords (coerce flags))
-
 runRustSanityChecks :: Action ()
 runRustSanityChecks = getEnv "RUSTUP_TOOLCHAIN" >>= \case
   Nothing -> pure ()
@@ -127,14 +103,7 @@ runRustSanityChecks = getEnv "RUSTUP_TOOLCHAIN" >>= \case
     )
 
 -- | Returns a command runner function that forwards the extra flags to ShellCmd.
---
--- TODO: Replacing the return type with Rules (ACmdRunner ShellCmd) gives an
--- impredicative polymorphism related error. Investigate this...
-cargoBoilerplate
-  :: Project
-  -> [Flag]
-  -> [Target]
-  -> Rules ([CmdOption] -> ShellCmd -> Action ())
+cargoBoilerplate :: Project -> [Flag] -> [Target] -> Rules ACmdRunner
 cargoBoilerplate p@Rooted{full} flags targets = do
     action runRustSanityChecks
     let fwd_ = fwdCmd flags
@@ -148,14 +117,10 @@ cargoBoilerplate p@Rooted{full} flags targets = do
       phony "build" <| run [Cwd full] "cargo build --color=always"
       phony "test"  <| run [Cwd full] "cargo test"
       phony "clean" <| run [Cwd full] "cargo clean"
-{-# ANN cargoBoilerplate ("HLint: reduce duplication" :: String) #-}
+{-# ANN cargoBoilerplate ("HLint: ignore Reduce duplication" :: String) #-}
 -- We can refactor common stuff later if needed.
 
-stackBoilerplate
-  :: Project
-  -> [Flag]
-  -> [Target]
-  -> Rules ([CmdOption] -> ShellCmd -> Action ())
+stackBoilerplate :: Project -> [Flag] -> [Target] -> Rules ACmdRunner
 stackBoilerplate p@Rooted{full} flags targets = do
     let fwd_ = fwdCmd flags
     if null targets then fwdToStack fwd_ else want (coerce targets)
@@ -178,84 +143,114 @@ miuShakeArgs root run =
   where
     run' fs ts = run fs (map fromString ts)
 
------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- * Main functions
+
+defaultMain :: RuleBuilder -> ProjectName -> Project -> IO ()
+defaultMain f pname p =
+  assert (name p == pname)
+    miuShakeArgs (root p) <| \fs ts -> pure (Just (f p fs ts))
 
 miuMain :: Project -> IO ()
-miuMain p = do
-  assert (proj p == Miu) (pure ())
-  -- Makes sense to update the build system first :)
-  sannaMain   (p `changeProject` Sanna)
-  -- Then the compiler(s)
-  miukiMain   (p `changeProject` Miuki)
-  miukiHsMain (p `changeProject` MiukiHs)
-  -- Stuff which depends on the compiler
-  miudocMain  (p `changeProject` Miudoc)
-  miuspecMain (p `changeProject` Miuspec)
-  -- The server last as it will probably end up depending on everything else
-  sojiroMain  (p `changeProject` Sojiro)
+miuMain p =
+  forM_ allProjects $ \pj ->
+    defaultMain (rulesFor pj) pj (p `changeProject` pj)
 
-defaultHaskellMain :: Project -> IO ()
-defaultHaskellMain p@Rooted{root} =
-  miuShakeArgs root <| pure <. Just <. void <.: stackBoilerplate p
+mainFor :: ProjectName -> Project -> IO ()
+mainFor = \case
+  Miu -> miuMain
+  n   -> \p -> defaultMain (rulesFor n) n (p `changeProject` n)
 
-defaultRustMain :: Project -> IO ()
-defaultRustMain p@Rooted{root} =
-  miuShakeArgs root <| pure <. Just <. void <.: cargoBoilerplate p
+rulesFor :: ProjectName -> RuleBuilder
+rulesFor = \case
+  Miu     -> miuRules
+  Miudoc  -> miudocRules
+  Miuki   -> miukiRules
+  MiukiHs -> miukiHsRules
+  Miuspec -> miuspecRules
+  Numark  -> numarkRules
+  Sanna   -> sannaRules
+  Sojiro  -> sojiroRules
 
-sannaMain :: Project -> IO ()
-sannaMain p = assert (proj p == Sanna) defaultHaskellMain p
+--------------------------------------------------------------------------------
+-- * Rules
 
-numarkMain :: Project -> IO ()
-numarkMain p = assert (proj p == Numark) defaultRustMain p
+type ACmdRunner = [CmdOption] -> ShellCmd -> Action ()
 
-miudocMain :: Project -> IO ()
-miudocMain p = assert (proj p == Miudoc) defaultRustMain p
+fwdOpts :: OptDescr (Either a Flag)
+fwdOpts = Option "f" ["fwd"] (ReqArg (Right . Flag) "FLAGS")
+  "Forward arguments to the underlying command."
 
-sojiroMain :: Project -> IO ()
-sojiroMain p = assert (proj p == Sojiro) defaultRustMain p
+refreshRule :: Project -> ACmdRunner -> Rules ()
+refreshRule Rooted{root, name, primaryProject} run =
+  phony "refresh" <|
+    when (name == primaryProject) <|
+      run [Cwd (root </> "sanna")] "stack install"
 
-miukiHsMain :: Project -> IO ()
-miukiHsMain p = assert (proj p == MiukiHs) defaultHaskellMain p
+type RuleBuilder = Project -> [Flag] -> [Target] -> Rules ()
 
-miukiMain :: Project -> IO ()
-miukiMain p@Rooted{root, full, proj} = do
-  assert (proj == Miuki) (pure ())
-  miuShakeArgs root <| \flags targets -> pure <. Just <| do
-      fwd_ <- cargoBoilerplate p flags targets
+defaultHaskellRules, defaultRustRules :: RuleBuilder
+miuRules, miudocRules, miukiRules, miukiHsRules, miuspecRules :: RuleBuilder
+numarkRules, sannaRules, sojiroRules :: RuleBuilder
 
-      let benchPath = full </> "bench"
-          sampleDir = benchPath </> "samples"
-      phony "__generateMiuFiles" <|
-        fwd_ [Cwd sampleDir] "python3 generate.py"
+defaultHaskellRules a b c = void (stackBoilerplate a b c)
+defaultRustRules    a b c = void (cargoBoilerplate a b c)
 
-      sampleDir </> "*.miu" %> fire "__generateMiuFiles"
+miuRules p flags targets = do
+  let fwd_ = fwdCmd flags
+  want (filter (== "refresh") $ coerce targets)
+  refreshRule p fwd_
 
-      sampleDir </> "generate.py" %> fire "__generateMiuFiles"
+miudocRules = defaultRustRules
 
-      phony "bench" <| do
-        -- if either thing changes, their rules should fire
-        need [sampleDir </> "generate.py", sampleDir </> "10k.miu"]
-        fwd_ [Cwd full] "cargo bench"
+miukiRules p@Rooted{full} flags targets = do
+  fwd_ <- cargoBoilerplate p flags targets
+  let benchPath = full </> "bench"
+      sampleDir = benchPath </> "samples"
+  phony "__generateMiuFiles" <|
+    fwd_ [Cwd sampleDir] "python3 generate.py"
+  sampleDir </> "*.miu" %> fire "__generateMiuFiles"
+  sampleDir </> "generate.py" %> fire "__generateMiuFiles"
+  phony "bench" <| do
+    -- if either thing changes, their rules should fire
+    need [sampleDir </> "generate.py", sampleDir </> "10k.miu"]
+    fwd_ [Cwd full] "cargo bench"
 
-miuspecMain :: Project -> IO ()
-miuspecMain p@Rooted{root, full, proj} = do
-  assert (proj == Miuspec) (pure ())
-  miuShakeArgs root <| \flags targets -> pure . Just <| do
-      -- Don't forget the next line or Shake won't do anything!
-      want (coerce targets)
-      let fwd_ = fwdCmd flags
+miukiHsRules = defaultHaskellRules
 
-      phony "clean" <|
-        removeFilesAfter full ["lang.pdf"]
+miuspecRules p@Rooted{full} flags targets = do
+  -- Don't forget the next line or Shake won't do anything!
+  want (coerce targets)
+  let fwd_ = fwdCmd flags
 
-      refreshRule p fwd_
+  phony "clean" <|
+    removeFilesAfter full ["lang.pdf"]
 
-      phony "__generatePDF" <|
-        fwd_ [Cwd full] "rst2pdf lang.rst -o lang.pdf -s kerning"
+  refreshRule p fwd_
 
-      full </> "lang.pdf" %> fire "__generatePDF"
+  phony "__generatePDF" <|
+    fwd_ [Cwd full] "rst2pdf lang.rst -o lang.pdf -s kerning"
 
-      full </> "lang.rst" %> fire "__generatePDF"
+  full </> "lang.pdf" %> fire "__generatePDF"
 
-      phony "build" <|
-        need [full </> "lang.rst", full </> "lang.pdf"]
+  full </> "lang.rst" %> fire "__generatePDF"
+
+  phony "build" <|
+    need [full </> "lang.rst", full </> "lang.pdf"]
+
+numarkRules = defaultRustRules
+sannaRules  = defaultHaskellRules
+sojiroRules = defaultRustRules
+
+--------------------------------------------------------------------------------
+-- * Helper functions
+
+fire :: FilePath -> a -> Action ()
+fire p = const (need [p])
+
+fwdCmd
+  :: ( Coercible flags [String], IsCmdArgument args
+     , Coercible shcmd String, CmdArguments ret)
+  => flags -> args -> shcmd -> ret
+fwdCmd flags args shcmd =
+  cmd args (coerce shcmd ++ ' ' : unwords (coerce flags))
