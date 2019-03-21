@@ -137,8 +137,9 @@ impl Path {
 }
 
 impl ToSvg for Path {
+    type Output = SvgPath;
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn to_svg(&self) -> String {
+    fn to_svg(&self) -> Self::Output {
         let mut d = SvgData::new()
             .move_to(self.a.as_tuple());
         d = if self.is_curved() {
@@ -152,7 +153,7 @@ impl ToSvg for Path {
             .set("fill", "none")
             .set("d", d);
         p = if self.dashed { p.set("stroke-dasharray", "3,6") } else { p };
-        format!("{}", p)
+        p
     }
 }
 
@@ -210,12 +211,13 @@ impl PathSet {
     }
 }
 
-impl ToSvg for PathSet {
-    fn to_svg(&self) -> String {
-        // You would've thought this would be easy...
-        self.set.iter().map(|p| p.to_svg()).collect::<Vec<String>>().join("\n")
-    }
-}
+// impl ToSvg for PathSet {
+//     type Output = Box<dyn Iterator<Item = <Path as ToSvg>::Output>>;
+//     fn to_svg(&self) -> Self::Output {
+//         // You would've thought this would be easy...
+//         Box::new(self.set.iter().map(|p| p.to_svg()))
+//     }
+// }
 
 pub struct PathSetIter<'a> {
     iter: slice::Iter<'a, Path>,

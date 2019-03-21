@@ -150,18 +150,21 @@ impl Grid {
         v.y.round() < self.height && MonoWidth(v.x.round()) < self.width
     }
 
+    fn used_index(&self, v: V2) -> usize {
+        // We don't have a +1 unlike Markdeep as we do not have trailing newlines
+        v.y.round() * self.width.get() + v.x.round()
+    }
+
     pub fn is_used<T: IsV2>(&self, vv: T) -> bool {
         let v = vv.to_v2();
-        // We don't have a +1 unlike Markdeep as we do not have trailing newlines
-        self.in_bounds(v)
-            && self.used[v.y.round() * self.width.get() + v.x.round()]
+        self.in_bounds(v) && self.used[self.used_index(v)]
     }
 
     pub fn set_used<T: IsV2>(&mut self, vv: T) {
         let v = vv.to_v2();
         if self.in_bounds(v) {
-            // We don't have a +1 unlike Markdeep as we do not have trailing newlines
-            self.used[v.y.round() * self.width.get() + v.x.round()] = true;
+            let i = self.used_index(v);
+            self.used[i] = true;
         }
     }
 
@@ -922,8 +925,7 @@ pub fn find_decorations(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationS
                     decors.insert((v, c));
                     g.set_used(v);
                 }
-            }
-            else if is_point(c) {
+            } else if is_point(c) {
                 let up = g.at_faux(v.up());
                 let dn = g.at_faux(v.dn());
                 let lf = g.at_faux(v.lf());
@@ -939,19 +941,17 @@ pub fn find_decorations(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationS
                     decors.insert((v, c));
                     g.set_used(v);
                 }
-                else if is_gray(c) {
-                    decors.insert((v, c));
-                    g.set_used(v);
-                }
-                else if is_tri(c) {
-                    decors.insert((v, c));
-                    g.set_used(v);
-                } else {
-                    find_arrowheads(g, ps, decors, v, c);
-                }
-            } // y
-        } // x
-    }
+            } else if is_gray(c) {
+                decors.insert((v, c));
+                g.set_used(v);
+            } else if is_tri(c) {
+                decors.insert((v, c));
+                g.set_used(v);
+            } else {
+                find_arrowheads(g, ps, decors, v, c);
+            }
+        } // y
+    } // x
 }
 
 fn find_arrowheads(g: &mut Grid, ps: &mut PathSet, decors: &mut DecorationSet, v: V2, c: char) {

@@ -11,7 +11,7 @@ use diagram::parse_diagram;
 #[test]
 fn no_overlapping_paths() {
     let s = "---";
-    let diagram = parse_diagram(s.to_string());
+    let diagram = parse_diagram(&[s]);
     assert!(diagram.num_paths() == 1);
 }
 #[test]
@@ -24,7 +24,7 @@ fn test_diagram_works() {
     let s2 = "   |\n";
     let s3 = "   v\n";
     let s4 = "   *\n";
-    let dia = parse_diagram(format!("{}{}{}{}", s1, s2, s3, s4));
+    let dia = parse_diagram(&[s1, s2, s3, s4]);
     println!("{:?}", dia);
     for p in dia.paths.iter() {
         println!("{}", p.to_svg());

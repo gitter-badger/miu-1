@@ -3,5 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 pub trait ToSvg {
-    fn to_svg(&self) -> String;
+    type Output;
+    fn to_svg(&self) -> Self::Output;
 }

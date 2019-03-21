@@ -9,10 +9,12 @@ mod decoration;
 mod grid;
 pub mod to_svg;
 
+
 #[allow(dead_code)]
 use self::grid::{Grid, find_paths, find_decorations};
 use self::path::PathSet;
 use self::decoration::DecorationSet;
+use self::to_svg::ToSvg;
 
 use regex::Regex;
 
@@ -20,8 +22,28 @@ use regex::Regex;
 pub struct Diagram {
     grid: Grid,
     pub paths: PathSet,
-    decorations: DecorationSet
+    pub decorations: DecorationSet
 }
+
+impl ToSvg for Diagram {
+    type Output = svg::Document;
+    fn to_svg(&self) -> Self::Output {
+        let mut doc = svg::Document::new();
+        for p in self.paths.iter() {
+            doc = doc.add(p.to_svg());
+        }
+        for d in self.decorations.iter() {
+            let boxed_node =
+            doc = doc.add(d.to_svg());
+        }
+        doc
+    }
+}
+// impl crate::diagram::to_svg::ToSvg for Diagram {
+//     type Output = svg::Document;
+//     fn to_svg(&self) -> Self::Output {
+//     }
+// }
 
 impl Diagram {
     pub fn num_paths(&self) -> usize {
