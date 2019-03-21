@@ -22,6 +22,7 @@ typed-arena = "^1.4.1"
 ramp = "^0.4.1"
 regex = "*"
 plex = "*"
+tree-sitter = "^0.3.9"
 
 [dev-dependencies]
 criterion = "^0.2.3"

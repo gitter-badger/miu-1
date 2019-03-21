@@ -1,4 +1,7 @@
 miuki/bench/samples/*.miu
+miuki/miu-ts-parser/binding.gyp
+miuki/miu-ts-parser/index.js
+miuki/miu-ts-parser/src/
 *.pdf
 **/Cargo.lock
 **/*.cabal
@@ -6,6 +9,7 @@ miuki/bench/samples/*.miu
 **/.sanna/
 **/.stack-work/
 **/target/
+**/node_modules/
 
 **/.vscode
 **/.idea

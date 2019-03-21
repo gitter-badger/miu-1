@@ -1,0 +1,27 @@
+{
+  "name": "miu-ts-parser",
+  "version": "0.0.0",
+  "description": "A parser for Miu using Tree Sitter.",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "== 10.15.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theindigamer/miu.git"
+  },
+  "author": "Varun Gandhi",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/theindigamer/miu/issues"
+  },
+  "homepage": "https://github.com/theindigamer/miu#readme",
+  "dependencies": {
+    "nan": "== 2.13.1"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "== 0.14.5"
+  }
+}
