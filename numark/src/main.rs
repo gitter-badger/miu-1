@@ -7,11 +7,11 @@ use diagram::parse_diagram;
 use diagram::to_svg::ToSvg;
 
 fn main() {
-    let s1 = "o--\\n";
-    let s2 = "   |\n";
-    let s3 = "   v\n";
-    let s4 = "   *\n";
-    let dia = parse_diagram(format!("{}{}{}{}", s1, s2, s3, s4));
+    let s1 = r"o--\";
+    let s2 = r"   |";
+    let s3 = r"   v";
+    let s4 = r"   *";
+    let dia = parse_diagram(&vec![s1, s2, s3, s4].as_slice());
     // println!("{:?}", dia);
     for p in dia.paths.iter() {
         println!("{}", p.to_svg());

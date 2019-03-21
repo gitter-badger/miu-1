@@ -152,14 +152,16 @@ impl Grid {
 
     pub fn is_used<T: IsV2>(&self, vv: T) -> bool {
         let v = vv.to_v2();
+        // We don't have a +1 unlike Markdeep as we do not have trailing newlines
         self.in_bounds(v)
-            && self.used[v.y.round() * (self.width.get() + 1) + v.x.round()]
+            && self.used[v.y.round() * self.width.get() + v.x.round()]
     }
 
     pub fn set_used<T: IsV2>(&mut self, vv: T) {
         let v = vv.to_v2();
         if self.in_bounds(v) {
-            self.used[v.y.round() * (self.width.get() + 1) + v.x.round()] = true;
+            // We don't have a +1 unlike Markdeep as we do not have trailing newlines
+            self.used[v.y.round() * self.width.get() + v.x.round()] = true;
         }
     }
 
@@ -316,20 +318,20 @@ fn check<T, F: Fn(T) -> bool>(f: F, t: Option<T>) -> bool {
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a> From<&'a str> for Grid {
-    fn from(s: &str) -> Grid {
+impl<'a> From<&[&str]> for Grid {
+    fn from(s: &[&str]) -> Grid {
         let mut width = MonoWidth(0);
         let mut height = 0;
         let mut orig_widths = vec![];
-        for line in s.lines() {
-            let cur_width = MonoWidth(UnicodeWidthStr::width(line));
+        for line in s.iter() {
+            let cur_width = MonoWidth(UnicodeWidthStr::width(*line));
             orig_widths.push(cur_width);
             width = max(width, cur_width);
             height += 1;
         }
         let final_width = width.get();
         let mut data: Vec<String> = Vec::with_capacity(height);
-        for (i, (line, MonoWidth(len))) in s.lines().zip(&orig_widths).enumerate() {
+        for (i, (line, MonoWidth(len))) in s.iter().zip(&orig_widths).enumerate() {
             println!("i: {}, line: {}, len: {}", i, line, len);
             // We've only set the capacity, the length still needs to be incremented.
             data.push(line.clone().to_string());
@@ -338,6 +340,16 @@ impl<'a> From<&'a str> for Grid {
                 data[i].push(' ');
             }
         }
+        // diagramString = diagramString.rp(/([a-zA-Z]{2})o/g, '$1' + HIDE_O);
+        // diagramString = diagramString.rp(/o([a-zA-Z]{2})/g, HIDE_O + '$1');
+        // diagramString = diagramString.rp(/([a-zA-Z\ue004])o([a-zA-Z\ue004])/g, '$1' + HIDE_O + '$2');
+        // TODO: Write regexes.
+        // let re1 = Regex::new("o").unwrap();
+        // let re2 = Regex::new("o").unwrap();
+        // let re3 = Regex::new("o").unwrap();
+        // mut_replace(s, re1, format!("$1{:?}", HIDE_O));
+        // mut_replace(s, re2, format!("{:?}$1", HIDE_O));
+        // mut_replace(s, re3, format!("$1{:?}$2", HIDE_O));
         let used = vec![false; height * final_width];
         Grid {width, height, data, pos_cache: RefCell::new(PosCache::default()), used}
     }

@@ -1,6 +1,10 @@
 Diagrams
 ========
 
+* When using non-ASCII codepoints, it is best to double-check the output
+  manually on making changes, instead of relying on the alignment shown in
+  the text editor.
+
 Gotchas:
 --------
 
