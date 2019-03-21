@@ -1,0 +1,9 @@
+type Foo : Type where {
+    I : Int -> Foo;
+    B : Bool -> Foo;
+}
+
+let i : Int
+
+let f : Foo
+let f = Foo.I i
