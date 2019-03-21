@@ -1,5 +1,0 @@
-{
-  "project.name"        : "miu-lang",
-  "phabricator.uri"     : "https://fab.miu-lang.org",
-  "base"                : "git:merge-base(origin/master), arc:prompt"
-}

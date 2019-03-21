@@ -1,3 +1,0 @@
-[submodule "miuki/lalrpop"]
-	path = miuki/lalrpop
-	url = https://github.com/lalrpop/lalrpop.git
