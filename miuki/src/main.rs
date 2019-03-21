@@ -4,9 +4,23 @@
 
 extern crate miuki;
 extern crate ramp;
+extern crate tree_sitter;
 
-use miuki::test;
+// use miuki::test;
 
-fn main() {
-    test();
+use tree_sitter::{Parser, Language};
+
+use std::io::Read;
+
+fn main() -> std::io::Result<()> {
+    let mut parser = Parser::new();
+    let language = unsafe { miuki::parser::tree_sitter_miu() };
+    parser.set_language(language).unwrap();
+    let mut source_code: String = "".to_string();
+    println!("{}", std::env::current_dir()?.display());
+    std::io::BufReader::new(std::fs::File::open("test.miu")?)
+        .read_to_string(&mut source_code)?;
+    let tree = parser.parse(source_code, None).unwrap();
+    println!("{}", tree.root_node().to_sexp());
+    Ok(())
 }

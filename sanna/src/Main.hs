@@ -34,7 +34,7 @@ getProject =
       s:_
         | Just name <- readMaybe s
           -> Rooted {root, full = root </> s, name, primaryProject = name}
-      ps  -> error $
+      ps  -> error <|
         "Not sure which project you're trying to build.\n\
         \Maybe update the build system to handle it?\n\
         \Here's the path I found\n\n\t" ++ show ps
@@ -103,8 +103,11 @@ runRustSanityChecks = getEnv "RUSTUP_TOOLCHAIN" >>= \case
     )
 
 -- | Returns a command runner function that forwards the extra flags to ShellCmd.
-cargoBoilerplate :: Project -> [Flag] -> [Target] -> Rules ACmdRunner
-cargoBoilerplate p@Rooted{full} flags targets = do
+--
+-- The "prebuilt" argument avoids punting the work onto Cargo's build.rs file,
+-- as we are better positioned to work with it here.
+cargoBoilerplate :: Project -> [Flag] -> [Target] -> [FilePath] -> Rules ACmdRunner
+cargoBoilerplate p@Rooted{full} flags targets prebuilt = do
     action runRustSanityChecks
     let fwd_ = fwdCmd flags
     if null targets then fwdToCargo fwd_ else want (coerce targets)
@@ -114,7 +117,9 @@ cargoBoilerplate p@Rooted{full} flags targets = do
   where
     fwdToCargo f = action (f [Cwd full] "cargo")
     basicRules run = do
-      phony "build" <| run [Cwd full] "cargo build --color=always"
+      phony "build" <| do
+        unless (null prebuilt) <| need ((full </> "build.rs") : prebuilt)
+        run [Cwd full] "cargo build --color=always"
       phony "test"  <| run [Cwd full] "cargo test"
       phony "clean" <| run [Cwd full] "cargo clean"
 {-# ANN cargoBoilerplate ("HLint: ignore Reduce duplication" :: String) #-}
@@ -153,7 +158,7 @@ defaultMain f pname p =
 
 miuMain :: Project -> IO ()
 miuMain p =
-  forM_ allProjects $ \pj ->
+  forM_ allProjects <| \pj ->
     defaultMain (rulesFor pj) pj (p `changeProject` pj)
 
 mainFor :: ProjectName -> Project -> IO ()
@@ -194,17 +199,43 @@ miuRules, miudocRules, miukiRules, miukiHsRules, miuspecRules :: RuleBuilder
 numarkRules, sannaRules, sojiroRules :: RuleBuilder
 
 defaultHaskellRules a b c = void (stackBoilerplate a b c)
-defaultRustRules    a b c = void (cargoBoilerplate a b c)
+defaultRustRules    a b c = void (cargoBoilerplate a b c [])
 
 miuRules p flags targets = do
   let fwd_ = fwdCmd flags
-  want (filter (== "refresh") $ coerce targets)
+  want (filter (== "refresh") <| coerce targets)
   refreshRule p fwd_
 
 miudocRules = defaultRustRules
 
+miukiTsParserRules :: FilePath -> Rules [FilePath]
+miukiTsParserRules full = do
+  let parserDir = full </> "miu-ts-parser"
+  let treeSitterBinary =
+        joinPath [parserDir, "node_modules", "tree-sitter-cli", "tree-sitter"]
+
+  treeSitterBinary %> \_ ->
+    cmd_ [Cwd parserDir] ("npm install" :: String)
+
+  joinPath [parserDir, "src", "parser.c"] %> \_ -> do
+    need [treeSitterBinary]
+    cmd_ (Cwd parserDir) (treeSitterBinary ++ " generate")
+
+  joinPath [parserDir, "src", "parser.o"] %> \_ -> do
+    need [parserDir </> "src" </> "parser.c"]
+    cmd_ [Cwd (parserDir </> "src")] ("clang -fPIC -I . -c parser.c" :: String)
+
+  joinPath [parserDir, "libmiuparser.a"] %> \_ -> do
+    need [parserDir </> "src" </> "parser.o"]
+    cmd_ [Cwd parserDir] ("ar crs libmiuparser.a " ++ ("src" </> "parser.o"))
+
+  pure [parserDir </> "libmiuparser.a"]
+
 miukiRules p@Rooted{full} flags targets = do
-  fwd_ <- cargoBoilerplate p flags targets
+
+  prebuilt <- miukiTsParserRules full
+
+  fwd_ <- cargoBoilerplate p flags targets prebuilt
   let benchPath = full </> "bench"
       sampleDir = benchPath </> "samples"
   phony "__generateMiuFiles" <|

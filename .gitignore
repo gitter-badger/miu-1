@@ -2,6 +2,7 @@ miuki/bench/samples/*.miu
 miuki/miu-ts-parser/binding.gyp
 miuki/miu-ts-parser/index.js
 miuki/miu-ts-parser/src/
+miuki/miu-ts-parser/libmiuparser.a
 *.pdf
 **/Cargo.lock
 **/*.cabal
