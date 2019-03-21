@@ -22,6 +22,6 @@ svg = "*"
 [dev-dependencies]
 proptest = "*"
 
-[[test]]
-path = "test/spec.rs"
-name = "default"
+# [[test]]
+# path = "test/spec.rs"
+# name = "default"

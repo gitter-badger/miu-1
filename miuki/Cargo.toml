@@ -2,8 +2,7 @@
 name = "miuki"
 version = "0.0.0"
 authors = ["Varun Gandhi <theindigamer15@gmail.com>"]
-build = "build.rs"
-license = "BSD-3-Clause"
+license = "MPL-2.0"
 
 [lib]
 name = "miuki"
@@ -22,11 +21,9 @@ harness = false
 typed-arena = "^1.4.1"
 ramp = "^0.4.1"
 regex = "*"
-plex = {git = "https://github.com/goffrie/plex.git", branch = "master"}
-lalrpop-util = {git = "https://github.com/nikomatsakis/lalrpop", branch = "master"}
-
-[build-dependencies]
-lalrpop = {git = "https://github.com/nikomatsakis/lalrpop", branch = "master"}
+plex = "*"
 
 [dev-dependencies]
 criterion = "^0.2.3"
+quickcheck = "^0.8.2"
+quickcheck_macros = "*"
