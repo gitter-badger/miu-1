@@ -218,7 +218,7 @@ miukiTsParserRules full = do
     cmd_ [Cwd parserDir] ("npm install" :: String)
 
   joinPath [parserDir, "src", "parser.c"] %> \_ -> do
-    need [treeSitterBinary]
+    need [treeSitterBinary, parserDir </> "grammar.js"]
     cmd_ (Cwd parserDir) (treeSitterBinary ++ " generate")
 
   joinPath [parserDir, "src", "parser.o"] %> \_ -> do

@@ -160,12 +160,12 @@ Holes are supported to allow for a better interactive experience::
 
 Examples::
 
-  let foo = Just 10 : .. Int -- analagous to 'Just @Int 10' in Haskell
-  let bar : _b = f x  -- compiler will suggest the type to fill for _b
-  let baz : _1 = f2 y
-  let qux : _1 = f3 z -- compiler will suggest an option with the constraint that
-                      -- the two _1's match; the "rewrite action" will include a
-                      -- renaming for all _1 holes
+  let foo = Just 10 : .. Int -- analogous to 'Just @Int 10' in Haskell
+  let bar : ?b = f x  -- compiler will suggest the type to fill for ?b
+  let baz : ?1 = f2 y
+  let qux : ?1 = f3 z -- compiler will suggest an option with the constraint that
+                      -- the two ?1's match; the "rewrite action" will include a
+                      -- renaming for all ?1 holes
 
 Keywords
 ========
@@ -366,9 +366,9 @@ terminology from Haskell)::
       (y ->? Just x) -> q x
       else -> z
 
-``match`` expressions are very similar to ``if`` but have a "head" too::
+``case`` expressions are very similar to ``if`` but have a "head" too::
 
-  match x with
+  case x of
     y & let (w ->? Just z) -> q z
     ..  -> p
 
@@ -507,16 +507,6 @@ Examples
         msg = "Hi "                      let msg = "Hi " in
     print (msg ++ name ++ "!")           print (msg ++ name ++ "!");
                                        }
-
-module declarations::
-
-  Light syntax                 Heavy syntax
-
-  mod Foo where                mod Foo {
-    type Bar = Int               type Bar = Int;
-    let double : Bar -> Bar      let double : Bar -> Bar;
-    let double = (* 2)           let double = (* 2);
-                               }
 
 pattern matching::
 
