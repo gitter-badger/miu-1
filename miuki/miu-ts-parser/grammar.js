@@ -1,8 +1,32 @@
 module.exports = grammar({
     name: 'miu',
 
+    extras: $ => [
+        $.comment,
+        // Copied from tree-sitter-python
+        // Not entirely sure what this regex is doing.
+        // Why is there a separate backslash?
+        // Why are we handling \r\n here?
+        /[\s\uFEFF\u2060\u200B]|\\\r?\n/
+    ],
+
     rules: {
+
         source_file: $ => repeat($.definition),
+
+        comment: $ => token(choice(
+            // TODO: This comment syntax isn't quite right, but tree-sitter
+            // doesn't support start-of-line/end-of-line assertions (they would
+            // anyways get messed up by the scanner), so I'm not sure how to handle
+            // comments correctly. As it stands, we can't have operators which
+            // have '--' in them.
+            seq('--', /.*/),
+            // No nesting.
+            seq('{-', /(.|\n)*/, '-}')
+        )),
+
+        non_newline_whitespace: $ =>
+            /[ \f\t\v\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/,
 
         definition: $ => choice(
             $.top_value_signature,
