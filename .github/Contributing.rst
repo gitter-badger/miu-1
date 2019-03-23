@@ -1,19 +1,21 @@
 Project organization
 ********************
 
-* ``miudoc`` - documentation
-* ``miuki`` - compiler
-* ``miumiugo`` - search
-* ``miuspec`` - specification
-* ``sanna`` - build system for all the projects (including itself)
-* ``sojiro`` - editor services
+* ``miudoc``   - documentation
+* ``miuki``    - compiler
+* ``miuki-hs`` - compiler for prototyping stuff
+* ``miumiugo`` - code search
+* ``miuspec``  - specification
+* ``numark``   - markup language
+* ``sanna``    - build system for all the projects (including itself)
+* ``sojiro``   - editor services
 
 Guidelines
 **********
 
 * Avoid using the following words (and variations) in communication
   (GitHub comments etc.) and *especially* in documentation:
-  - 'just' - exception: the ``Just`` constructor (capitalization!)
+  - 'just'   - exception: the ``Just`` constructor (capitalization!)
   - 'simply' - exception: the verb "simplify" is okay
   - 'obviously'
   - 'clearly'
