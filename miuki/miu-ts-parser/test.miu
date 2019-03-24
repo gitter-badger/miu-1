@@ -3,8 +3,6 @@ type Foo : Type where {
     B : Bool -> Foo;
 }
 
-let i : Int
-
--- A comment
-let f : Foo
-let f = {- Delimited comment -} Foo.I i
+type Foo : Type where
+    I : Int -> Foo
+    B : Bool -> Foo

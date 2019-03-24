@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 module.exports = grammar({
     name: 'miu',
 
@@ -10,9 +14,18 @@ module.exports = grammar({
         /[\s\uFEFF\u2060\u200B]|\\\r?\n/
     ],
 
+    externals: $ => [
+        $._newline,
+        $._indent,
+        $._dedent
+    ],
+
     rules: {
 
-        source_file: $ => repeat($.definition),
+        source_file: $ => seq(
+            optional($._newline),
+            sepEndBy($.definition, $._newline)
+        ),
 
         comment: $ => token(choice(
             // TODO: This comment syntax isn't quite right, but tree-sitter
@@ -32,7 +45,7 @@ module.exports = grammar({
             $.top_value_signature,
             $.top_value_definition,
             $.top_type_signature,
-            $.top_type_definition
+            $.top_type_definition,
         ),
 
         top_value_signature: $ => seq(
@@ -171,14 +184,23 @@ module.exports = grammar({
 
         type_definition_rhs: $ => choice(
             $.data_type_definition_rhs,
+            $.light_data_type_definition_rhs,
             $.type_alias_definition_rhs
         ),
 
         data_type_definition_rhs: $ => seq(
             'where',
             '{',
-            sepEndBy($.data_constructor_definition, ';'),
+            $._newline,
+            sepEndBy($.data_constructor_definition, seq(';', $._newline)),
             '}'
+        ),
+
+        light_data_type_definition_rhs: $ => seq(
+            'where',
+            $._indent,
+            sepEndBy($.data_constructor_definition, $._newline),
+            $._dedent,
         ),
 
         type_alias_definition_rhs: $ => seq(
@@ -212,5 +234,13 @@ function sepEndBy1(rule, sep) {
     return seq(
         rule,
         optional(seq(sep, sepEndBy(rule, sep)))
+    );
+}
+
+function indented($, rule) {
+    return seq(
+        $._indent,
+        rule,
+        $._dedent
     );
 }
