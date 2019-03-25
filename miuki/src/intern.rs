@@ -15,7 +15,7 @@ pub struct InternedStr {
 /// An alternative to &str.
 ///
 /// It is guaranteed that the first byte of the struct will be 0.
-/// To make sure this guarantee holds, we keep the len field private.
+/// To make sure this invariant holds, we keep the len field private.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct StringRef {

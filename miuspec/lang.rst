@@ -51,7 +51,7 @@ Principles
 Lexical analysis
 ****************
 
-Miu files must be valid UTF-8.
+Miu files must be valid UTF-8 and not contain unescaped NULL (U+0000) characters.
 
 Notation
 ========

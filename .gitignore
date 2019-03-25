@@ -1,8 +1,9 @@
 miuki/bench/samples/*.miu
-miuki/miu-ts-parser/binding.gyp
-miuki/miu-ts-parser/index.js
-miuki/miu-ts-parser/src/
-miuki/miu-ts-parser/libmiuparser.a
+miuki/tree-sitter-miu/binding.gyp
+miuki/tree-sitter-miu/index.js
+miuki/tree-sitter-miu/src/
+miuki/tree-sitter-miu/libmiuparser.a
+miuki/tree-sitter-miu/log.html
 *.pdf
 **/Cargo.lock
 **/*.cabal

@@ -14,10 +14,10 @@
 
 #define DEBUG(x) if (SCANNER_DEBUG_FLAG) { x; }
 #define UNREACHABLE(s) printf(\
-  "{ \"tool\" : \"miu-lexer\", " \
-  "  \"msg\" : \"" s \
+  "{ \"tool\" : \"miu-lexer\"," \
+   " \"msg\" : \"" s \
                " Consider reporting this as a bug on the issue tracker." \
-               "\"" \
+               "\" " \
   "}");
 
 // TODO: We need to have a solid strategy that handles multiline strings
@@ -34,7 +34,7 @@
 // we might actually have shallower indentation.
 //
 // tree-sitter-python seems to be doing something pretty strange here. It
-// just gobbles inline comments! So it might happen that you consumed a "NEWLINE"
+// just gobbles inline comments! So it might happen that you consumed a "ALIGN"
 // token, but when you inspect that token's string, it contains comments in
 // arbitrary places!
 
@@ -45,7 +45,7 @@ using std::vector;
 // Ignoring comments, here is 1 example of expected behaviour.
 //
 // do                do, INDENT
-// ··foo    Tokens   ··, foo, NEWLINE
+// ··foo    Tokens   ··, foo, ALIGN
 // ··do    ------->  ··, do, INDENT
 // ····bar           ····, bar, DEDENT
 // ··blep            ··, blep, DEDENT
@@ -54,12 +54,12 @@ using std::vector;
 // tokens do not always correspond to newlines.
 //
 // do                do, INDENT
-// ··foo    Tokens   ··, foo, NEWLINE
+// ··foo    Tokens   ··, foo, ALIGN
 // ··do    ------->  ··, do, INDENT
 // ····bar           ····, bar, DEDENT, DEDENT
 //
 enum TokenType {
-    NEWLINE,
+    ALIGN,
     INDENT,
     DEDENT,
 };
@@ -71,7 +71,7 @@ enum TokenType {
 //
 // We disallow nulls in the language spec anyways (who knows what
 // might crash if this were allowed), so this isn't super important.
-const uint32_t MY_EOF = 0;
+const uint32_t TS_BUGGY_EOF = 0;
 
 // The lexer->advance functions uses boolean arguments but it isn't clear what
 // they're supposed to mean.
@@ -147,19 +147,20 @@ struct Scanner {
                     n_to_copy);
         n_copied_so_far += n_to_copy;
 
-        n_to_copy = sizeof(IndentItem);
+        n_to_copy = sizeof(decltype(latest_indent));
         std::memcpy((void *) &(buffer[n_copied_so_far]),
                     (void *) &latest_indent,
                     n_to_copy);
         n_copied_so_far += n_to_copy;
 
-        n_to_copy = indent_stack.size() * sizeof(IndentItem);
+        using element_type = decltype(indent_stack)::value_type;
+        n_to_copy = indent_stack.size() * sizeof(element_type);
         if (n_copied_so_far + n_to_copy > TREE_SITTER_SERIALIZATION_BUFFER_SIZE) {
             UNREACHABLE("WARNING: Tree sitter's buffer is too small."
                         " This shouldn't be happening, unless your code has an"
                         " unhealthy number of indentation levels all at once.");
             n_to_copy = TREE_SITTER_SERIALIZATION_BUFFER_SIZE - n_copied_so_far;
-            n_to_copy = n_to_copy - n_to_copy % sizeof(IndentItem);
+            n_to_copy = n_to_copy - n_to_copy % sizeof(element_type);
         }
         std::memcpy((void *) &(buffer[n_copied_so_far]),
                     (void *) indent_stack.data(),
@@ -194,7 +195,7 @@ struct Scanner {
         n_remaining -= n_to_copy;
         n_copied_so_far += n_to_copy;
 
-        n_to_copy = sizeof(IndentItem);
+        n_to_copy = sizeof(decltype(latest_indent));
         if (n_remaining < n_to_copy) return;
         std::memcpy((void *) &latest_indent,
                     (void *) &(buffer[n_copied_so_far]),
@@ -202,7 +203,8 @@ struct Scanner {
         n_remaining -= n_to_copy;
         n_copied_so_far += n_to_copy;
 
-        n_to_copy = n_remaining - (n_remaining % sizeof(IndentItem));
+        using element_type = decltype(indent_stack)::value_type;
+        n_to_copy = n_remaining - n_remaining % sizeof(element_type);
         if (n_to_copy == 0) {
             // Save an empty value to preserve the non-empty invariant.
             indent_stack.push_back(IndentItem());
@@ -211,7 +213,7 @@ struct Scanner {
             DEBUG(printf("After deserializing, stack size = 1.\n"));
             return;
         }
-        indent_stack.resize(n_to_copy / sizeof(IndentItem));
+        indent_stack.resize(n_to_copy / sizeof(element_type));
         std::memcpy((void *) indent_stack.data(),
                     (void *) &(buffer[n_copied_so_far]),
                     n_to_copy);
@@ -272,14 +274,14 @@ struct Scanner {
               lexer->advance(lexer, IS_WHITESPACE);
               break;
 
-            case MY_EOF:
+            case TS_BUGGY_EOF:
               if (valid_symbols[DEDENT] && indent_stack.size() > 1) {
                   indent_stack.pop_back();
                   lexer->result_symbol = DEDENT;
                   return RECOGNIZED;
               }
-              if (valid_symbols[NEWLINE]) {
-                  lexer->result_symbol = NEWLINE;
+              if (valid_symbols[ALIGN]) {
+                  lexer->result_symbol = ALIGN;
                   return RECOGNIZED;
               }
               return UNKNOWN;
@@ -308,8 +310,11 @@ struct Scanner {
                 // ··line0$
                 // ··line1
                 //   ^ latest_indent
-                if (valid_symbols[NEWLINE] && latest_indent == current_indent) {
-                    lexer->result_symbol = NEWLINE;
+                if (valid_symbols[ALIGN] && latest_indent == current_indent) {
+                  printf("latest_indent = (%d, %d), current_indent = (%d, %d)\n",
+                           latest_indent.spaces, latest_indent.tabs,
+                           current_indent.spaces, current_indent.tabs);
+                    lexer->result_symbol = ALIGN;
                     return RECOGNIZED;
                 }
 
@@ -323,14 +328,14 @@ struct Scanner {
                         lexer->result_symbol = INDENT;
                         return RECOGNIZED;
                     }
-                    // do$
-                    // ··do {$       --> consumed '\n'
-                    // ····let line0
-                    //     ^ latest_indent
-                    if (valid_symbols[NEWLINE]) {
-                        lexer->result_symbol = NEWLINE;
-                        return RECOGNIZED;
-                    }
+                    // // do$
+                    // // ··do {$       --> consumed '\n'
+                    // // ····let line0
+                    // //     ^ latest_indent
+                    // if (valid_symbols[ALIGN]) {
+                    //     lexer->result_symbol = ALIGN;
+                    //     return RECOGNIZED;
+                    // }
                     // TODO: Add unreachable msg here.
                 }
 
@@ -349,20 +354,20 @@ struct Scanner {
                         lexer->result_symbol = DEDENT;
                         return RECOGNIZED;
                     }
-                    // do$
-                    // ····do {$  --> consumed '\n'
-                    // ··line0
-                    //   ^ latest_indent
-                    if (valid_symbols[NEWLINE]) {
-                        lexer->result_symbol = NEWLINE;
-                        return RECOGNIZED;
-                    }
+                    // // do$
+                    // // ····do {$  --> consumed '\n'
+                    // // ··line0
+                    // //   ^ latest_indent
+                    // if (valid_symbols[ALIGN]) {
+                    //     lexer->result_symbol = ALIGN;
+                    //     return RECOGNIZED;
+                    // }
                     // TODO: Add unreachable msg here.
                 }
 
                 if (latest_indent.not_comparable_to(current_indent)) {
                     // TODO: Decide a good error handling strategy here.
-                    lexer->result_symbol = NEWLINE;
+                    lexer->result_symbol = ALIGN;
                     return RECOGNIZED;
                 }
 

@@ -10,6 +10,7 @@ import Development.Shake.Command (IsCmdArgument, CmdArguments)
 import Text.Read (readMaybe)
 import System.Console.GetOpt (ArgDescr (ReqArg), OptDescr (Option))
 import System.Directory (getCurrentDirectory)
+import Distribution.System (OS (..), buildOS)
 
 main :: IO ()
 main = do
@@ -210,26 +211,20 @@ miudocRules = defaultRustRules
 
 miukiTsParserRules :: FilePath -> Rules [FilePath]
 miukiTsParserRules full = do
-  let parserDir = full </> "miu-ts-parser"
-  let treeSitterBinary =
+  let parserDir = full </> "tree-sitter-miu"
+      treeSitterBinary =
         joinPath [parserDir, "node_modules", "tree-sitter-cli", "tree-sitter"]
+      parser_c   = parserDir </> "src" </> "parser.c"
+      scanner_cc = parserDir </> "src" </> "scanner.cc"
 
   treeSitterBinary %> \_ ->
     cmd_ [Cwd parserDir] ("npm install" :: String)
 
-  joinPath [parserDir, "src", "parser.c"] %> \_ -> do
+  parser_c  %> \_ -> do
     need [treeSitterBinary, parserDir </> "grammar.js"]
     cmd_ (Cwd parserDir) (treeSitterBinary ++ " generate")
 
-  joinPath [parserDir, "src", "parser.o"] %> \_ -> do
-    need [parserDir </> "src" </> "parser.c"]
-    cmd_ [Cwd (parserDir </> "src")] ("clang -fPIC -I . -c parser.c" :: String)
-
-  joinPath [parserDir, "libmiuparser.a"] %> \_ -> do
-    need [parserDir </> "src" </> "parser.o"]
-    cmd_ [Cwd parserDir] ("ar crs libmiuparser.a " ++ ("src" </> "parser.o"))
-
-  pure [parserDir </> "libmiuparser.a"]
+  pure [parser_c, scanner_cc]
 
 miukiRules p@Rooted{full} flags targets = do
 

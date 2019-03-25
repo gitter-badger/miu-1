@@ -8,7 +8,7 @@ extern crate tree_sitter;
 
 // use miuki::test;
 
-use tree_sitter::{Parser, Language};
+use tree_sitter::{Parser};
 
 use std::io::Read;
 

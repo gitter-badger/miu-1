@@ -15,17 +15,23 @@ module.exports = grammar({
     ],
 
     externals: $ => [
-        $._newline,
+        $._align,
         $._indent,
         $._dedent
     ],
 
     rules: {
 
+        // It isn't clear to me where _align should be put here or not.
         source_file: $ => seq(
-            optional($._newline),
-            sepEndBy($.definition, $._newline)
+            optional($._align),
+            sepEndBy($.definition, $._align)
         ),
+
+        _begin: $ => alias($._indent, '_begin'),
+        _end: $ => alias($._dedent, '_end'),
+        _in: $ => alias($._align, '_in'),
+        _semi: $ => alias($._align, '_semi'),
 
         comment: $ => token(choice(
             // TODO: This comment syntax isn't quite right, but tree-sitter
@@ -184,23 +190,12 @@ module.exports = grammar({
 
         type_definition_rhs: $ => choice(
             $.data_type_definition_rhs,
-            $.light_data_type_definition_rhs,
             $.type_alias_definition_rhs
         ),
 
         data_type_definition_rhs: $ => seq(
             'where',
-            '{',
-            $._newline,
-            sepEndBy($.data_constructor_definition, seq(';', $._newline)),
-            '}'
-        ),
-
-        light_data_type_definition_rhs: $ => seq(
-            'where',
-            $._indent,
-            sepEndBy($.data_constructor_definition, $._newline),
-            $._dedent,
+            fsharpStyle($, $.data_constructor_definition),
         ),
 
         type_alias_definition_rhs: $ => seq(
@@ -237,10 +232,16 @@ function sepEndBy1(rule, sep) {
     );
 }
 
-function indented($, rule) {
-    return seq(
-        $._indent,
-        rule,
-        $._dedent
+function fsharpStyle($, rule) {
+    return choice(
+        seq(
+            '{',
+            sepEndBy(rule, ';'),
+            '}'
+        ), seq(
+            $._begin,
+            sepEndBy(rule, $._semi),
+            $._end,
+        )
     );
 }
