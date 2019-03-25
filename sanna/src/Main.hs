@@ -10,7 +10,6 @@ import Development.Shake.Command (IsCmdArgument, CmdArguments)
 import Text.Read (readMaybe)
 import System.Console.GetOpt (ArgDescr (ReqArg), OptDescr (Option))
 import System.Directory (getCurrentDirectory)
-import Distribution.System (OS (..), buildOS)
 
 main :: IO ()
 main = do
@@ -86,7 +85,7 @@ newtype Flag = Flag String
 newtype ShellCmd = ShellCmd String
 
 instance IsString ShellCmd where
-  fromString = coerce
+  fromString = ShellCmd
 
 newtype Target = Target String
   deriving Show
@@ -233,13 +232,9 @@ miukiRules p@Rooted{full} flags targets = do
   fwd_ <- cargoBoilerplate p flags targets prebuilt
   let benchPath = full </> "bench"
       sampleDir = benchPath </> "samples"
-  phony "__generateMiuFiles" <|
-    fwd_ [Cwd sampleDir] "python3 generate.py"
-  sampleDir </> "*.miu" %> fire "__generateMiuFiles"
-  sampleDir </> "generate.py" %> fire "__generateMiuFiles"
+  sampleDir </> "*.miu" %> \_ -> fwd_ [Cwd sampleDir] "./generate.hs"
   phony "bench" <| do
-    -- if either thing changes, their rules should fire
-    need [sampleDir </> "generate.py", sampleDir </> "10k.miu"]
+    need [sampleDir </> "10k.miu"]
     fwd_ [Cwd full] "cargo bench"
 
 miukiHsRules = defaultHaskellRules

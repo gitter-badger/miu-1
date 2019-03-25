@@ -8,11 +8,10 @@ Prerequisites
    (compiler & tools, recommended)
 2. `Haskell (stack) <https://docs.haskellstack.org/en/stable/README/#how-to-install>`_
    (build system, recommended)
-3. Python3 (glue, you probably already have it)
-4. A C/C++ compiler (used to compile the parser).
-5. NPM + nodejs (needed by ``tree-sitter``) to generate the parser. This isn't
+3. A C and C++ compiler (needed to compile the parser).
+4. NPM + nodejs (needed by ``tree-sitter``) to generate the parser. This isn't
    needed if you don't work on the parser as the generated code is committed.
-6. `rst2pdf <https://github.com/rst2pdf/rst2pdf#installation-and-use>`_ (docs, optional)
+5. `rst2pdf <https://github.com/rst2pdf/rst2pdf#installation-and-use>`_ (docs, optional)
 
 If you're having trouble installing any of these, please feel free to ask for
 help on the issue tracker (that reminds me: I should set up some IM thingy...).
