@@ -24,8 +24,9 @@ getProject =
   .> \(joinPath -> pre, post) ->
        let root = pre </> "miu" in
          case post of
-           [] -> error "Couldn't find the miu directory on the cwd path.\
-                       \Exiting :("
+           [] -> error ("Couldn't find the miu directory on the cwd path\n\n\
+                        \    " ++ pre ++ "\n\n" ++
+                        "Exiting :(")
            "miu":ps -> identifyLast root ps
            _ -> unreachable
   where

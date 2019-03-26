@@ -1,0 +1,19 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+steps:
+- script: |
+    # Azure uses weird folder names, which means that sanna can't detect the
+    # project correctly. We rename the current directory using this trick.
+    mv "$PWD" ../miu
+    cd ../miu
+    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+    curl -sSL https://get.haskellstack.org/ | sh
+    curl https://sh.rustup.rs -sSf | sh -s -- -y
+    sudo apt-get install clang-6.0 rst2pdf
+    stack install
+    sanna build
+  displayName: 'Build project'
