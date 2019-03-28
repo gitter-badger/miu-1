@@ -1,19 +1,41 @@
 trigger:
 - master
 
-pool:
-  vmImage: 'Ubuntu-16.04'
+# such duplication, much wow.
+jobs:
+- job: Ubuntu_16_04
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - script: |
+      # Azure uses weird folder names, which means that sanna can't detect the
+      # project correctly. We rename the current directory using this trick.
+      mv "$PWD" ../miu
+      cd ../miu
+      sudo apt-get install clang-6.0 rst2pdf
+      export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+      curl -sSL https://get.haskellstack.org/ | sh
+      curl https://sh.rustup.rs -sSf | sh -s -- -y
+      stack install
+      sanna build
 
-steps:
-- script: |
-    # Azure uses weird folder names, which means that sanna can't detect the
-    # project correctly. We rename the current directory using this trick.
-    mv "$PWD" ../miu
-    cd ../miu
-    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
-    curl -sSL https://get.haskellstack.org/ | sh
-    curl https://sh.rustup.rs -sSf | sh -s -- -y
-    sudo apt-get install clang-6.0 rst2pdf
-    stack install
-    sanna build
-  displayName: 'Build project'
+- job: macOS_10_13
+  pool:
+    vmImage: 'macos-10.13'
+  steps:
+  - script: |
+      # Azure uses weird folder names, which means that sanna can't detect the
+      # project correctly. We rename the current directory using this trick.
+      mv "$PWD" ../miu
+      cd ../miu
+      # We should be installing clang but I couldn't get the brew installation
+      # to work easily using `brew install --with-clang llvm` and the Azure
+      # image already ships with some version of XCode/LLVM/Clang so we'll
+      # just use whatever's available till we figure out how to pin the version.
+      clang++ --version
+      sudo pip install rst2pdf
+      export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+      curl -sSL https://get.haskellstack.org/ | sh
+      curl https://sh.rustup.rs -sSf | sh -s -- -y
+      stack install
+      sanna build

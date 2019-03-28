@@ -51,7 +51,7 @@ module.exports = grammar({
             $.top_value_signature,
             $.top_value_definition,
             $.top_type_signature,
-            $.top_type_definition,
+            $.top_type_definition
         ),
 
         top_value_signature: $ => seq(
@@ -100,7 +100,7 @@ module.exports = grammar({
             $.path,
             $.unit_type,
             $.record_type,
-            $.function_type,
+            $.function_type
         ),
 
         unit_type: $ => '()',
@@ -124,7 +124,7 @@ module.exports = grammar({
             seq('(', $.expression , ')'),
             $.suspension,
             $.record_expression,
-            $.let_binding,
+            $.let_binding
         ),
 
         binding: $ => $.pattern,
@@ -140,7 +140,7 @@ module.exports = grammar({
             // constructors (ignoring case restrictions) and all identifiers
             // are paths too.
             $.application_pattern,
-            $.record_pattern,
+            $.record_pattern
         ),
 
         let_binding: $ => seq(
@@ -195,7 +195,7 @@ module.exports = grammar({
 
         data_type_definition_rhs: $ => seq(
             'where',
-            fsharpStyle($, $.data_constructor_definition),
+            fsharpStyle($, $.data_constructor_definition)
         ),
 
         type_alias_definition_rhs: $ => seq(
@@ -241,7 +241,7 @@ function fsharpStyle($, rule) {
         ), seq(
             $._begin,
             sepEndBy(rule, $._semi),
-            $._end,
+            $._end
         )
     );
 }
