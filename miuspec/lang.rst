@@ -355,7 +355,7 @@ Elements
 
 [TODO: Think about pattern guard syntax. It shouldn't make parsing hard.]
 
-At the core of ``match`` and ``if`` statements are ``guards`` (borrowing
+At the core of ``case`` and ``if`` statements are ``guards`` (borrowing
 terminology from Haskell)::
 
   guard = expr | pattern
@@ -371,6 +371,11 @@ terminology from Haskell)::
   case x of
     y & let (w ->? Just z) -> q z
     ..  -> p
+
+[NOTE: The flexibility seems nice to have -- however, I need to find more papers
+on efficiently compiling these, especially in more general cases. From an
+implementation perspective, it would probably be better to implement and
+optimize the simple cases first.]
 
 Operators are allowed as type variables. This can be handy when working with
 profunctors and similar higher-kinded type constructors. For example::
@@ -512,7 +517,7 @@ pattern matching::
 
   Light syntax      Heavy syntax
 
-  match foo with    match foo {
+  case foo of       case foo of {
     1 | 2 -> x        1 | 2 -> x,
     _ -> y            _ -> y,
                     }
@@ -557,32 +562,48 @@ These should be easy to use and on by default:
 
   + polymorphic variants
   + row polymorphic records
-
     - duplicate fields allowed? - see Koka, Purescript
     - duplicate fields disallowed? - see Ur/Web
-
+    - custom/multiple row theories? - see Morris and McKinna's
+      "Abstracting Extensible Data Types"
   + modules and applicative ML functors
+    I need to study mixin modules better though, particularly MixML & Backpack.
 
 * Haskell-based
   + GADTs
   + higher-kinded types
-  + rank-2 types (possibly rank-N types)
+  + rank-N types (possibly rank-N types)
   + existential types
-  + type families (with limited partial application?)
+  + liquid/refinement types
 
 * some form of linear/affine types
 
 * effect system
-  + From where? Eff, Koka/Purescript, Frank/Unison?
+  What style though? Eff, Koka/Purescript, Frank/Unison?
+  Right now, I'm leaning towards Frank-style effects because of lack of
+  explicit effect variables in most cases, which just obscure what's going
+  on underneath. That said, I don't understand the paper well -- trying out
+  a naive implementation under miuki-hs (using Haskell for easier
+  prototyping).
 
-Needs more thought/time/research:
+* (almost?) first class modules
+
+Needs more thought/research:
 
 * coercion
 * functional dependencies (desugar to type families?)
+* type families (with limited partial application?)
+  The paper "Higher-order type-level programming in Haskell" might be
+  helpful here. There certainly seems to be some overlap with modules, so are
+  these really useful as a separate feature? What about abstraction?
+  Is the "global-ness" of type family definitions anti-modular?
 * levity polymorphism instead of sub-kinding?
+* evaluation-order polymorphism?
 * generative functors
-* first class modules
-* refinement types/dependent types - ease of integration
+
+Most likely not going to include:
+
+* full dependent types - first-class modules are already very good
 
 ****************
 Implicit modules
