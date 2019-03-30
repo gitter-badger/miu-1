@@ -1,4 +1,5 @@
 miuki/bench/samples/*.miu
+miuki/tree-sitter-miu/build/
 miuki/tree-sitter-miu/binding.gyp
 miuki/tree-sitter-miu/index.js
 miuki/tree-sitter-miu/src/

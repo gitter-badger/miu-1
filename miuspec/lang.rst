@@ -117,6 +117,11 @@ Identifiers
 [TODO: Reserve something for extra uppercasing. Also check if Chinese characters
 are allowed here.]
 
+[NOTE: Recently, I've been thinking that we should scrap all this complexity
+and have flexible identifiers in the style of Racket. Identifiers which consist
+of symbols only may be used as infix operators, with possibly some special casing
+for 'o'.]
+
 Legal identifiers have the following specification::
 
   regex digit-char = '\Nd'
@@ -134,7 +139,8 @@ Legal identifiers have the following specification::
     | ' | _
   regex ident-end-char = #
   token ident = ident-start-char ident-mid-char* ident-end-char?
-  token open-variant-ident = '^' ('\Lu' | '\Lt' | '\Lo') ident-mid-char* ident-end-char?
+  token open-variant-ident =
+    '^' ('\Lu' | '\Lt' | '\Lo') ident-mid-char* ident-end-char?
 
 Holes
 -----
@@ -175,14 +181,14 @@ literals::
 
   token ident-keyword =
     rec
-    let in as and where
-    type mod implicit
+    let in as where
+    type mod module namespace implicit
     deriving via pattern
     forall exists
     do if else match with
-    import operator visible
-    foreign volatile
-    atomic
+    use open import operator visible
+    extern foreign
+    volatile atomic
 
   token contextual-ident-keyword = alias family map default
 
@@ -201,13 +207,11 @@ literals::
   token backslash-op = "\\"
 
   token symbolic-keyword =
-    | & \ . : .. ; = ..= ? ?? ! ~
+    | & \ . : .. ; = ..< ..= ? ?? ! ~
     -> <- -o => <= -!>
     ( ) $(             (| |)
     [ ] $[ [> [< >] <] [| |]
     { } ${ {> {< >} <} {| |}
-    -[ident]->
-    =[ident]=>
 
   token contextual-symbolic-keyword = "=="
 
@@ -391,14 +395,11 @@ is arguably clearer than
 Syntactic sugar
 ===============
 
+I should try out ideas from Justin Pombrio's papers on resugaring before
+adding a bunch of sugar.
+
 ``do`` blocks
 -------------
-
-View patterns
--------------
-
-Comprehensions
---------------
 
 *************
 Scoping rules
@@ -440,16 +441,16 @@ Here are some examples::
   type s : Measure
   type sqm : Measure = m ^ 2
 
-  let triangleArea : F64 [m] -> F64 [m] -> F64 [sqm]
+  let triangleArea : Float64 [m] -> Float64 [m] -> Float64 [sqm]
   let triangleArea base height = 0.5 * base * height
 
-  let distanceTravelled : F64 [m/s] -> F64 [s] -> F64 [m]
+  let distanceTravelled : Float64 [m/s] -> Float64 [s] -> Float64 [m]
   let distanceTravelled speed time = speed * time
 
 Units are inferred generically only upon annotation::
 
-  let square1 (x : F64 ['u]) = x * x
-  -- square1 : F64 ['u] -> F64 ['u ^ 2]
+  let square1 (x : Float64 ['u]) = x * x
+  -- square1 : Float64 ['u] -> Float64 ['u ^ 2]
 
   let square2 x = x * x
   -- square2 : Multiply a a => a -> a
@@ -562,10 +563,12 @@ These should be easy to use and on by default:
 
   + polymorphic variants
   + row polymorphic records
+
     - duplicate fields allowed? - see Koka, Purescript
     - duplicate fields disallowed? - see Ur/Web
     - custom/multiple row theories? - see Morris and McKinna's
       "Abstracting Extensible Data Types"
+
   + modules and applicative ML functors
     I need to study mixin modules better though, particularly MixML & Backpack.
 
@@ -644,6 +647,17 @@ Some common sense thoughts -
 2. Potentially be extensible across packages? This complicates name lookup, so
    I'm not sure if this is a good idea.
 
+Ideally, we don't want to introduce different kinds of separators::
+
+    -- Looks kinda' ugly
+    mycompany.package::MyModule.Type
+    -- Looks a bit odd?
+    mycompany.
+
+Should package names be allowed to be used in the path? If we do that,
+they would prevent us from swapping out implementations while preserving
+the interface if someone does use the package name explicitly.
+
 *******
 Prelude
 *******
@@ -653,10 +667,9 @@ of the Prelude and what things are required from alternate preludes. It
 shouldn't have anything that would fit better in the library documentation.]
 
 ::
+
   type Monad (m : Type -> Type) = {
      include (Applicative m ⊔ Bind m)
      val leftIdentity : (a : Type) -> (x : a) -> Lemma { bind (pure x) f == f x }
      val rightIdentity : (a : Type) -> (x : a) -> Lemma { bind x pure == x }
   };
-
--
