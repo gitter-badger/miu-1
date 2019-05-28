@@ -1,8 +1,11 @@
 Some requirements are -
 
 * Allow precise GC
-* Allow specialization (if the user is willing to give up polymorphic recursion
-  and separate compilation)
+* Allow specialization to varying extents
+  - full specialization if the user is willing to give up polymorphic recursion
+    and separate compilation
+  - partial specialization with fine-grain control (e.g. specialize the
+    call graph of this function)
 
 (UX note: package/module documentation should make it clear whether the
 corresponding module permits specialization or not.)
@@ -118,6 +121,9 @@ Lazy values
 Not sure if we can copy OCaml's design - I'd strongly prefer that things be
 thread-safe by default.
 
+UPDATE: This `PR <https://github.com/ocaml-multicore/ocaml-multicore/pull/226>`_
+makes lazy values thread-safe. The approach there seems worth investigating.
+
 Polymorphic fields
 ==================
 
@@ -140,9 +146,10 @@ One problem is that because of offset computation, "upcasting" would involve
 creating a copy of the data with an updated vtable pointer. For example, consider
 the following made-up Haskell types
 
-    type X = exists a. (Foo a, Bar a) => a
-    type F = exists a. (Foo a) => a
-    type B = exists a. (Bar a) => a
+    -- The placeholder syntax ⊗ attaches vtables to data types.
+    type X = exists a. (Foo a, Bar a) ⊗ a
+    type F = exists a. (Foo a) ⊗ a
+    type B = exists a. (Bar a) ⊗ a
     f (a : F) = foo a
     g (a : B) = bar a
     h (a : X) = (f a, g a)
