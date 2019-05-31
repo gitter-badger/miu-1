@@ -154,7 +154,8 @@ module.exports = grammar({
 
         atomic_expression: $ => choice(
             $.unit,
-            $.integer
+            $.integer,
+            $.identifier
         ),
 
         atomic_pattern: $ => $.atomic_expression,
@@ -164,9 +165,11 @@ module.exports = grammar({
         integer: $ => /[0-9](_?[0-9]*)/,
 
         // This is terrible :(
-        application_expression: $ => prec.left(1, repeat1($.path)),
+        application_expression: $ =>
+            prec.left(1, seq($.expression, repeat1($.expression))),
 
-        application_pattern: $ => $.application_expression,
+        // This is not sufficiently general :(
+        application_pattern: $ => prec.left(1, repeat1($.path)),
 
         suspension: $ => seq('{', $.expression, '}'),
 

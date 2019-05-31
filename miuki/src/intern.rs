@@ -149,6 +149,7 @@ impl PartialEq for SSOStringRef {
                 // Even though we don't have pointers, instead of doing byte-wise
                 // comparison, we can treat the rest of the data as pointers and
                 // compare the two pointers.
+                std::debug_assert!(other.has_inline_data());
                 return self.inner.sref.ptr == other.inner.sref.ptr;
             } else {
                 // Now we really have two pointers on our hands
@@ -266,8 +267,7 @@ impl Interner {
                             &self.storage[si]
                                 .get(start..start + s.len())
                                 .unwrap(),
-                        )
-                        .unwrap()
+                        ).unwrap()
                     };
                     std::debug_assert!(start < u16::max_value() as usize);
                     istr = InternedStr {
@@ -277,8 +277,10 @@ impl Interner {
                     };
                 } else if s.len() <= STORAGE_CHUNK_SIZE {
                     let si = self.storage.len();
-                    // -1 because max_value is used to represent indices into
-                    // huge_strings
+                    // TODO: Not 100% sure if the -1 is needed.
+                    // -1 because the new len() for storage will be si + 1
+                    // and we still want si + 1 < INDEX_SENTINEL_VALUE.
+                    // However, checking that directly might overflow.
                     std::debug_assert!(si < INDEX_SENTINEL_VALUE as usize - 1);
                     self.storage.push([0; STORAGE_CHUNK_SIZE]);
                     for (i, b) in s.bytes().enumerate() {
