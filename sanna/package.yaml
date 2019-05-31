@@ -58,7 +58,7 @@ default-extensions:
 
 library:
   source-dirs:           src
-  exposed-modules:       Lib
+  exposed-modules:       Sanna.Prelude
 
 executables:
   sanna:
