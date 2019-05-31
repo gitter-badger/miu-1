@@ -69,6 +69,21 @@ There are two kinds -
           -> {| a : PrimArray t | inBounds i a |}
           -> {| a : PrimArray t | inBounds i a |}
 
+--
+Aside: What are the advantages and disadvantages of having two kinds with
+similar types (e.g. Int vs Int64#)?
+
+1. Type variables default to kind ``Type``. This means that a bunch of code
+   may need to be reimplemented for values of kind ``PrimType`` with little to
+   no changes.
+
+2. There are different "best" solutions in monomorphic and polymorphic contexts.
+   If everything is monomorphic, then using types from ``PrimType`` means you
+   have less overhead/more flexibility. However, if you suddenly want to use
+   a polymorphic function, then you need to use a type from ``Type``.
+   (TODO: Add some examples here)
+--
+
 NOTE: Passing reprs across module boundaries *implicitly* breaks separate
 compilation. In C/C++, if you want to access a struct in an unboxed fashion,
 you need to write the implementation in a header -- this is essentially the same
@@ -113,7 +128,9 @@ Closures
 For small values, we should probably copy them into the block itself, and
 for large values, capture them by reference.
 
-Q: What about partial application?
+Q: What about currying?
+
+Look at: Making a fast curry Push/enter vs eval/apply for higher-order languages
 
 Lazy values
 ===========
@@ -171,4 +188,4 @@ are no callee-save registers. Or try some other calling convention.
 
 Aside: Is it possible to design something (a pragma or otherwise), which forces
 conversion of recursion to iteration in the target code, enabling us to have
-useful stack traces? I should investigate what the ghc/ocamlc debugger does.
+useful stack traces? I should investigate what the ghc/ocamlc debuggers do.
