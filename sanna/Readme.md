@@ -1,6 +1,6 @@
 # Sanna
 
-Sanna is an internal build system for the Miuki compiler (and associated tools
+Sanna is an internal build system for the Miuri compiler (and associated tools
 in the future) written in Haskell.
 
 Right now, it is mostly an overlay on `cargo`.

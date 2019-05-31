@@ -277,7 +277,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "miuki"
+name = "miuri"
 version = "0.0.0"
 dependencies = [
  "cc 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",

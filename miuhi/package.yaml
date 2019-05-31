@@ -1,4 +1,4 @@
-name:                miuki-hs
+name:                miuhi
 version:             0.1.0.0
 github:              "theindigamer/miu"
 license:             MPL-2.0
@@ -16,7 +16,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         A scratchpad for features in Miuki.
+description:         A scratchpad for features in Miuri.
 
 dependencies:
 - base >= 4.11 && < 5
@@ -63,7 +63,7 @@ default-extensions:
 - GADTs
 
 executables:
-  miuki_hs:
+  miuri_hs:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -71,10 +71,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - miuki-hs
+    - miuhi
 
 tests:
-  miuki-hs-test:
+  miuhi-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -82,4 +82,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - miuki-hs
+    - miuhi

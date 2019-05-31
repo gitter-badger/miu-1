@@ -1,11 +1,11 @@
 [package]
-name = "miuki"
+name = "miuri"
 version = "0.0.0"
 authors = ["Varun Gandhi <theindigamer15@gmail.com>"]
 license = "MPL-2.0"
 
 [lib]
-name = "miuki"
+name = "miuri"
 path = "src/lib.rs"
 build = "build.rs"
 

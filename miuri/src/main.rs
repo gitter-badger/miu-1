@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-extern crate miuki;
+extern crate miuri;
 extern crate ramp;
 extern crate tree_sitter;
 
-// use miuki::test;
+// use miuri::test;
 
 use tree_sitter::{Parser, Node};
 
@@ -35,7 +35,7 @@ fn node_to_string(n: &Node, src: &str) -> String {
 
 fn main() -> std::io::Result<()> {
     let mut parser = Parser::new();
-    let language = unsafe { miuki::parser::tree_sitter_miu() };
+    let language = unsafe { miuri::parser::tree_sitter_miu() };
     parser.set_language(language).unwrap();
     let mut source_code: String = "".to_string();
     println!("{}", std::env::current_dir()?.display());

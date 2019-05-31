@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate criterion;
-extern crate miuki;
+extern crate miuri;
 
-use miuki::lexer;
-use miuki::parser;
+use miuri::lexer;
+use miuri::parser;
 
 use criterion::Benchmark;
 use criterion::Criterion;

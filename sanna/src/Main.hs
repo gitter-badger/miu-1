@@ -40,7 +40,7 @@ getProject =
         \Maybe update the build system to handle it?\n\
         \Here's the path I found\n\n\t" ++ show ps
 
-data ProjectName = Miu | Miudoc | Miuki | MiukiHs | Miuspec | Numark | Sanna | Sojiro
+data ProjectName = Miu | Miudoc | Miuri | Miuhi | Miuspec | Numark | Sanna | Sojiro
   deriving (Bounded, Enum, Eq)
 
 allProjects :: [ProjectName]
@@ -48,8 +48,8 @@ allProjects = [Miu .. Sojiro]
 
 instance Read ProjectName where
   readsPrec _ s = case s of
-    'm':'i':'u':'k':'i':'-':'h':'s':rest -> [(MiukiHs, rest)]
-    'm':'i':'u':'k':'i'            :rest -> [(Miuki  , rest)]
+    'm':'i':'u':'h':'i'            :rest -> [(Miuhi  , rest)]
+    'm':'i':'u':'r':'i'            :rest -> [(Miuri  , rest)]
     'm':'i':'u':'s':'p':'e':'c'    :rest -> [(Miuspec, rest)]
     'm':'i':'u':'d':'o':'c'        :rest -> [(Miudoc , rest)]
     'm':'i':'u'                    :rest -> [(Miu    , rest)]
@@ -62,8 +62,8 @@ relativePath :: ProjectName -> FilePath
 relativePath = \case
   Miu     -> ""
   Miudoc  -> "miudoc"
-  Miuki   -> "miuki"
-  MiukiHs -> "miuki-hs"
+  Miuri   -> "miuri"
+  Miuhi   -> "miuhi"
   Miuspec -> "miuspec"
   Numark  -> "numark"
   Sanna   -> "sanna"
@@ -171,8 +171,8 @@ rulesFor :: ProjectName -> RuleBuilder
 rulesFor = \case
   Miu     -> miuRules
   Miudoc  -> miudocRules
-  Miuki   -> miukiRules
-  MiukiHs -> miukiHsRules
+  Miuri   -> miuriRules
+  Miuhi   -> miuhiRules
   Miuspec -> miuspecRules
   Numark  -> numarkRules
   Sanna   -> sannaRules
@@ -196,7 +196,7 @@ refreshRule Rooted{root, name, primaryProject} run =
 type RuleBuilder = Project -> [Flag] -> [Target] -> Rules ()
 
 defaultHaskellRules, defaultRustRules :: RuleBuilder
-miuRules, miudocRules, miukiRules, miukiHsRules, miuspecRules :: RuleBuilder
+miuRules, miudocRules, miuriRules, miuhiRules, miuspecRules :: RuleBuilder
 numarkRules, sannaRules, sojiroRules :: RuleBuilder
 
 defaultHaskellRules a b c = void (stackBoilerplate a b c)
@@ -209,8 +209,8 @@ miuRules p flags targets = do
 
 miudocRules = defaultRustRules
 
-miukiTsParserRules :: FilePath -> Rules [FilePath]
-miukiTsParserRules full = do
+miuriTsParserRules :: FilePath -> Rules [FilePath]
+miuriTsParserRules full = do
   let parserDir = full </> "tree-sitter-miu"
       treeSitterBinary =
         joinPath [parserDir, "node_modules", "tree-sitter-cli", "tree-sitter"]
@@ -226,9 +226,9 @@ miukiTsParserRules full = do
 
   pure [parser_c, scanner_cc]
 
-miukiRules p@Rooted{full} flags targets = do
+miuriRules p@Rooted{full} flags targets = do
 
-  prebuilt <- miukiTsParserRules full
+  prebuilt <- miuriTsParserRules full
 
   fwd_ <- cargoBoilerplate p flags targets prebuilt
   let benchPath = full </> "bench"
@@ -238,7 +238,7 @@ miukiRules p@Rooted{full} flags targets = do
     need [sampleDir </> "10k.miu"]
     fwd_ [Cwd full] "cargo bench"
 
-miukiHsRules = defaultHaskellRules
+miuhiRules = defaultHaskellRules
 
 miuspecRules p@Rooted{full} flags targets = do
   -- Don't forget the next line or Shake won't do anything!

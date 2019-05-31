@@ -1,10 +1,10 @@
-miuki/bench/samples/*.miu
-miuki/tree-sitter-miu/build/
-miuki/tree-sitter-miu/binding.gyp
-miuki/tree-sitter-miu/index.js
-miuki/tree-sitter-miu/src/
-miuki/tree-sitter-miu/libmiuparser.a
-miuki/tree-sitter-miu/log.html
+miuri/bench/samples/*.miu
+miuri/tree-sitter-miu/build/
+miuri/tree-sitter-miu/binding.gyp
+miuri/tree-sitter-miu/index.js
+miuri/tree-sitter-miu/src/
+miuri/tree-sitter-miu/libmiuparser.a
+miuri/tree-sitter-miu/log.html
 *.pdf
 **/Cargo.lock
 **/*.cabal

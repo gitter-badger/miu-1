@@ -2,8 +2,8 @@ Project organization
 ********************
 
 * ``miudoc``   - documentation
-* ``miuki``    - compiler
-* ``miuki-hs`` - compiler for prototyping stuff
+* ``miuri``    - compiler (Rust)
+* ``miuhi``    - prototyping compiler (Haskell)
 * ``miumiugo`` - code search
 * ``miuspec``  - specification
 * ``numark``   - markup language

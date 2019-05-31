@@ -25,8 +25,8 @@ Build instructions
   cd miu
   # This will install the build system `sanna`
   stack build && stack install
-  # navigate to a subproject, e.g. `cd miuki`
-  cd miuki
+  # navigate to a subproject, e.g. `cd miuri`
+  cd miuri
   sanna build
 
 Contributing

@@ -586,7 +586,7 @@ These should be easy to use and on by default:
   Right now, I'm leaning towards Frank-style effects because of lack of
   explicit effect variables in most cases, which just obscure what's going
   on underneath. That said, I don't understand the paper well -- trying out
-  a naive implementation under miuki-hs (using Haskell for easier
+  a naive implementation under miuhi (using Haskell for easier
   prototyping).
 
 * (almost?) first class modules

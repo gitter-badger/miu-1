@@ -24,7 +24,7 @@ Key takeaways:
    are trying to write and one returns while it is actually the second one that
    is still writing to the table), which caused hard-to-track-down issues.
 
-Thoughts on Miuki
+Thoughts on Miuri
 -----------------
 
 #. I really do NOT want to skip over having function level inference.
