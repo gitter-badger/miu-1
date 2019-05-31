@@ -12,4 +12,8 @@ type Foo : Type where
 let factorial
   : Nat -- ^ End-of-line comment
  -> Nat
-let rec factorial x = if (lessThanOrEqualTo x 1) 1 (multiply x (factorial (minus x 1)))
+let rec factorial x =
+    let
+      cond = lessThanOrEqualTo x 1
+      smol = factorial (minus x 1)
+    in if cond 1 (multiply x smol)

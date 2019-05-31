@@ -145,9 +145,8 @@ module.exports = grammar({
 
         let_binding: $ => seq(
             'let',
-            $.binding,
-            '=',
-            $.expression,
+            optional('rec'),
+            fsharpStyle($, seq($.binding, '=', $.expression)),
             'in',
             $.expression
         ),
