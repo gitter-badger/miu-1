@@ -217,6 +217,17 @@ literals::
 
   token reserved-symbolic-keyword = `
 
+
+We need a lot of bracket forms :(
+
+1. Types - Rows (?), Records (``{ }``?), Variants (?), Tuples (?)
+           effects (prefix ``[ ]``?), units of measure (postfix ``[ ]``),
+           implicit arguments (?),
+           refinements (``{| |}``?)
+2. Terms - Rows (?), Records ``{ }``, Variants (?), Tuples (?),
+           suspensions (``{ }``?, ``~( )``?), units of measure (?),
+           sequences (?), quasiquotes (?), macros (?)
+
 Operators
 =========
 
