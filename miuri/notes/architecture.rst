@@ -27,6 +27,10 @@
     https://www.jetbrains.org/intellij/sdk/docs/basics/virtual_file_system.html
 * External syntax highlighter (not super important)
   - Needs a concrete syntax tree
+* Type debugger
+  - ???
+* Macro debugger
+  - ???
 
 # Passes
 
@@ -42,7 +46,7 @@ Where does macro expansion go?
        Token stream (implicit space)
             ↓  Parsing
      Concrete Syntax Tree
-            ↓  Name resolution
+            ↓  Name/fixity resolution
        Named Syntax Tree
             ↓  Macro expansion?
        Named Syntax Tree
@@ -52,3 +56,16 @@ Where does macro expansion go?
     Decorated Syntax Tree
             ↓  IRGen
             IR
+
+# Roadmap?
+
+* First, I want to have a very fast compiler
+  - Elm-like subset
+    - Rank-1 polymorphism
+    - Anonymous records with no extension/subtyping
+    - Minimal global inference, bidirectional type-checking
+  - Compile to x86_64 at 100k lines/sec or faster with non-trivial
+    instruction selection and register allocation
+  - No incrementality
+  - We keep the tree-sitter parser for now, unless it proves to
+    be taking a significant chunk of time.
