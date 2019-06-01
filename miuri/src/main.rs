@@ -3,34 +3,60 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 extern crate miuri;
+extern crate pretty;
 extern crate ramp;
 extern crate tree_sitter;
 
 // use miuri::test;
+use pretty::{BoxDoc, Doc};
 
-use tree_sitter::{Parser, Node};
+use tree_sitter::{Node, Parser};
 
 use std::io::Read;
 
-fn node_to_string(n: &Node, src: &str) -> String {
+fn node_to_doc<'a>(n: &Node, src: &'a str) -> Doc<'a, BoxDoc<'a, ()>, ()> {
+    // const width: usize = 80;
     if n.child_count() == 0 {
-        format!("({} {:?})", n.kind(),
-                std::str::from_utf8(
-                    src.as_bytes().get(n.start_byte() .. n.end_byte()).unwrap()
-                ).unwrap())
+        Doc::text("(")
+            .append(Doc::text(
+                if n.kind() == "(" || n.kind() == ")" {
+                    format!("\"{}\"", n.kind())
+                } else {
+                    n.kind().to_string()
+                }
+            ))
+            .append({
+                let s = std::str::from_utf8(
+                    src.as_bytes().get(n.start_byte()..n.end_byte()).unwrap()
+                ).unwrap();
+                if s == n.kind() || s == "" {
+                    Doc::nil()
+                } else {
+                    Doc::space().append(
+                        Doc::text(
+                            format!("\"{}\"", s)
+                        )
+                    )
+                }
+            })
+            .append(")")
+            .group()
     } else {
-        let mut s = format!("({}\n", n.kind());
-        for c in n.children() {
-            let inner = node_to_string(&c, src);
-            for l in inner.lines() {
-                s.push_str("  ");
-                s.push_str(l);
-                s.push('\n');
-            }
-        }
-        s.push_str(")");
-        s
+        Doc::text("(")
+            .append(Doc::text(n.kind()))
+            .append(Doc::space())
+            .append(
+                Doc::intersperse(n.children().map(|c| {
+                    node_to_doc(&c, src).nest(2)
+                }), Doc::space()).group()
+            )
+            .append(Doc::text(")"))
+            .group()
     }
+}
+
+fn node_to_string(n: &Node, src: &str) -> String {
+    format!("{}", node_to_doc(n, src).pretty(80))
 }
 
 fn main() -> std::io::Result<()> {

@@ -27,6 +27,7 @@ ramp = "^0.4.1"
 regex = "*"
 plex = "*"
 tree-sitter = "^0.3.9"
+pretty = "^0.5.2"
 
 [dev-dependencies]
 criterion = "^0.2.3"
