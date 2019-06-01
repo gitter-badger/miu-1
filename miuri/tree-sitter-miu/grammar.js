@@ -65,7 +65,6 @@ module.exports = grammar({
             'let',
             optional('rec'),
             $.binding,
-            optional($.parameter_list),
             '=',
             $.expression
         ),
