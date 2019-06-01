@@ -119,8 +119,8 @@ module.exports = grammar({
 
         expression: $ => choice(
             $.atomic_expression,
-            $.application_expression,
             seq('(', $.expression , ')'),
+            $.application_expression,
             $.suspension,
             $.record_expression,
             $.let_binding
@@ -130,6 +130,7 @@ module.exports = grammar({
 
         pattern: $ => choice(
             $.atomic_pattern,
+            seq('(', $.pattern, ')'),
             // Note: The following can actually have two distinct meanings.
             // In the context of bindings, if we have
             // let f a b c =, that is allowed. However, in the context of
