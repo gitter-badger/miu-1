@@ -41,7 +41,7 @@ Principles
    ``?``, "Holes (``?1``, ``?a``)", ""
    ``&``, "and (``&``, ``&&``), borrow", ""
    ``!``, "index (``!!``, ``!?``)", ""
-   ``->``, "function arrow, then (if/match)", ""
+   ``->``, "function arrow, then (if/case)", ""
    ``->?``, "pattern", ""
    ``#``, "primitive", ""
    ``@``, "optics?, type applications? memory address?", ""
@@ -185,7 +185,7 @@ literals::
     type mod module namespace implicit
     deriving via pattern
     forall exists
-    do if else match with
+    do if else case of
     use open import operator visible
     extern foreign
     volatile atomic
@@ -586,7 +586,7 @@ These should be easy to use and on by default:
 * Haskell-based
   + GADTs
   + higher-kinded types
-  + rank-N types (possibly rank-N types)
+  + rank-2 types (possibly rank-N types)
   + existential types
   + liquid/refinement types
 
