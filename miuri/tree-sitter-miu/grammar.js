@@ -48,8 +48,9 @@ module.exports = grammar({
             seq('{-', /(.|\n)*/, '-}')
         )),
 
-        non_newline_whitespace: $ =>
-            /[ \f\t\v\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/,
+        // TODO: Is this rule useful or should we delete it?
+        // non_newline_whitespace: $ =>
+        //     /[ \f\t\v\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/,
 
         definition: $ => choice(
             $.top_value_signature,
@@ -60,7 +61,12 @@ module.exports = grammar({
 
         top_value_signature: $ => seq(
             'let',
-            $.identifier,
+            // This is incorrect, it should technically be identifier, not path.
+            // However, we use path instead, so that when tree-sitter sees
+            // 'let x', it doesn't mark the second token as identifier. If the
+            // token gets classified as identifier, then having a non-':'
+            // token come up next would lead to an error.
+            $.path,
             ':',
             $.type
         ),
@@ -88,16 +94,15 @@ module.exports = grammar({
             $.type_definition_rhs
         ),
 
-        identifier: $ => /[A-Za-z][A-Za-z0-9]*/,
+        identifier: $ => identifierRegex(),
 
         parameter_list: $ => repeat1($.identifier),
 
-        path: $ => prec.left(1, seq(
-            // First '.' may be used for more ergonomic field updates,
-            // amongst other things.
-            optional('.'),
-            sepBy1($.identifier, '.')
-        )),
+        // NOTE: Since we allow whitespaces everywhere, tree-sitter ends up
+        path: $ => pathRegex(),
+
+        // In expression contexts, we use extended_path
+        extended_path: $ => extendedPathRegex(),
 
         type: $ => choice(
             $.path,
@@ -119,11 +124,13 @@ module.exports = grammar({
             seq($.path, '->', $.type)
         ),
 
-        record_label: $ => $.identifier,
+        record_label: $ => identifierRegex(),
 
         expression: $ => choice(
+            $.extended_path,
             $.literal_expression,
             seq('(', $.expression , ')'),
+            $.projection_expression,
             $.application_expression,
             $.suspension,
             $.record_expression,
@@ -144,22 +151,24 @@ module.exports = grammar({
             // This case is a bit of a PITA because all paths might possibly be
             // constructors (ignoring case restrictions) and all identifiers
             // are paths too.
+            //
+            // Since we don't distinguish between upper/lower case here, terms
+            // with just 1 identifier also fall under eliminator_pattern.
             $.eliminator_pattern,
             $.record_pattern
         ),
 
-        let_binding: $ => seq(
+        let_binding: $ => prec(1, seq(
             'let',
             optional('rec'),
             fsharpStyle($, seq($.binding, '=', $.expression)),
             'in',
             $.expression
-        ),
+        )),
 
         literal_expression: $ => choice(
             $.unit,
             $.integer,
-            $.identifier
         ),
 
         literal_pattern: $ => $.literal_expression,
@@ -169,9 +178,9 @@ module.exports = grammar({
 
         integer: $ => /[0-9](_?[0-9]*)/,
 
-        // This is terrible :(
-        application_expression: $ =>
-            prec.left(1, seq($.expression, repeat1($.expression))),
+        projection_expression: $  => prec.left(13, seq($.expression, '.', $.identifier)),
+
+        application_expression: $ => prec.left(11, seq(prec(2, repeat1($.expression)), $.expression)),
 
         // This is not sufficiently general :(
         eliminator_pattern: $ => prec.left(1, seq($.path, repeat($.pattern))),
@@ -180,7 +189,7 @@ module.exports = grammar({
 
         record_expression: $ => seq(
             '{',
-            optional(seq(optional($.path), 'with')),
+            optional(seq(optional($.expression), 'with')),
             sepEndBy($.record_expression_entry, ','),
             '}'
         ),
@@ -238,6 +247,18 @@ function sepEndBy1(rule, sep) {
         rule,
         optional(seq(sep, sepEndBy(rule, sep)))
     );
+}
+
+function identifierRegex() {
+    return /[A-Za-z][A-Za-z0-9]*/;
+}
+
+function pathRegex() {
+    return new RegExp(identifierRegex().source + "(\\." + identifierRegex().source + ")*");
+}
+
+function extendedPathRegex() {
+    return new RegExp("\\.?" + pathRegex().source);
 }
 
 function fsharpStyle($, rule) {
