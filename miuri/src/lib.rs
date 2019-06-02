@@ -4,23 +4,9 @@
 
 #![feature(hash_raw_entry)]
 
-#[cfg(test)]
-extern crate quickcheck;
-#[cfg(test)]
-#[macro_use(quickcheck)]
-extern crate quickcheck_macros;
-extern crate plex;
-extern crate tree_sitter;
-extern crate ramp;
-extern crate regex;
-
 pub mod intern;
-pub mod ast;
-pub mod lexer;
-mod mstring;
-pub mod pos;
-pub mod span;
 pub mod parser;
+pub mod syntax;
 
 pub fn test() {
     println!("Test");

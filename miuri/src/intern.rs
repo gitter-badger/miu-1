@@ -4,12 +4,14 @@
 
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash, Hasher};
+use std::marker::PhantomData;
 
 #[derive(Copy, Clone)]
-pub struct InternedStr {
+pub struct InternedStr<'i> {
     index: u32,
     start: u16,
     len: u16,
+    _region: PhantomData<&'i ()>,
 }
 
 /// An alternative to &str.
@@ -172,8 +174,8 @@ const INDEX_SENTINEL_VALUE: u32 = u32::max_value();
 
 const STORAGE_CHUNK_SIZE: usize = u16::max_value() as usize;
 
-pub struct Interner {
-    indices: HashMap<SSOStringRef, InternedStr>,
+pub struct Interner<'i> {
+    indices: HashMap<SSOStringRef, InternedStr<'i>>,
     bytes_left: usize,
     storage: Vec<[u8; STORAGE_CHUNK_SIZE]>,
     huge_strings: Vec<String>,
@@ -184,7 +186,7 @@ pub enum InternError {
     StringTooLong,
 }
 
-impl Interner {
+impl<'i> Interner<'i> {
     pub fn new(ss: &[&str]) -> Self {
         let mut i = Self::empty();
         for s in ss.iter() {
@@ -204,7 +206,7 @@ impl Interner {
 
     pub fn get_str_unchecked<'a, 'b: 'a>(
         &'b self,
-        istr: InternedStr,
+        istr: InternedStr<'i>,
     ) -> &'a str {
         let start = istr.start as usize;
         if istr.index >= INDEX_SENTINEL_VALUE {
@@ -217,7 +219,7 @@ impl Interner {
         }
     }
 
-    pub fn get_str<'a, 'b: 'a>(&'b self, istr: InternedStr) -> Option<&'a str> {
+    pub fn get_str<'a, 'b: 'a>(&'b self, istr: InternedStr<'i>) -> Option<&'a str> {
         let start = istr.start as usize;
         if istr.index >= INDEX_SENTINEL_VALUE {
             Some(self.huge_strings[start].as_str())
@@ -229,7 +231,7 @@ impl Interner {
         }
     }
 
-    pub fn insert(&mut self, s: &str) -> Result<InternedStr, InternError> {
+    pub fn insert(&mut self, s: &str) -> Result<InternedStr<'i>, InternError> {
         let sref = match SSOStringRef::new(s) {
             Some(x) => x,
             None => {
@@ -274,6 +276,7 @@ impl Interner {
                         index: si as u32,
                         start: start as u16,
                         len: s.len() as u16,
+                        _region: PhantomData,
                     };
                 } else if s.len() <= STORAGE_CHUNK_SIZE {
                     let si = self.storage.len();
@@ -297,6 +300,7 @@ impl Interner {
                         index: si as u32,
                         start: 0,
                         len: s.len() as u16,
+                        _region: PhantomData,
                     };
                 } else {
                     let ix = self.huge_strings.len();
@@ -308,6 +312,7 @@ impl Interner {
                         index: INDEX_SENTINEL_VALUE,
                         start: ix as u16,
                         len: 0,
+                        _region: PhantomData,
                     };
                 }
                 v.insert_hashed_nocheck(hash_value, new_key, istr);
