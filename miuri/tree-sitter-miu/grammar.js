@@ -2,6 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+// IMPORTANT: The names being used here are coordinated with the processing
+// in the syntax::abstract module. So if you change any names or structure here,
+// make sure to update that file as well.
+
 module.exports = grammar({
     name: 'miu',
 
@@ -118,7 +122,7 @@ module.exports = grammar({
         record_label: $ => $.identifier,
 
         expression: $ => choice(
-            $.atomic_expression,
+            $.literal_expression,
             seq('(', $.expression , ')'),
             $.application_expression,
             $.suspension,
@@ -126,10 +130,11 @@ module.exports = grammar({
             $.let_binding
         ),
 
+        // This is too permissive, but we can check for errors later.
         binding: $ => $.pattern,
 
         pattern: $ => choice(
-            $.atomic_pattern,
+            $.literal_pattern,
             seq('(', $.pattern, ')'),
             // Note: The following can actually have two distinct meanings.
             // In the context of bindings, if we have
@@ -139,7 +144,7 @@ module.exports = grammar({
             // This case is a bit of a PITA because all paths might possibly be
             // constructors (ignoring case restrictions) and all identifiers
             // are paths too.
-            $.application_pattern,
+            $.eliminator_pattern,
             $.record_pattern
         ),
 
@@ -151,14 +156,15 @@ module.exports = grammar({
             $.expression
         ),
 
-        atomic_expression: $ => choice(
+        literal_expression: $ => choice(
             $.unit,
             $.integer,
             $.identifier
         ),
 
-        atomic_pattern: $ => $.atomic_expression,
+        literal_pattern: $ => $.literal_expression,
 
+        // Should we allow whitespace between the parens? Hmm...
         unit: $ => '()',
 
         integer: $ => /[0-9](_?[0-9]*)/,
@@ -168,7 +174,7 @@ module.exports = grammar({
             prec.left(1, seq($.expression, repeat1($.expression))),
 
         // This is not sufficiently general :(
-        application_pattern: $ => prec.left(1, repeat1($.path)),
+        eliminator_pattern: $ => prec.left(1, seq($.path, repeat($.pattern))),
 
         suspension: $ => seq('{', $.expression, '}'),
 
