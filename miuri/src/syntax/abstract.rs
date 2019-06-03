@@ -14,10 +14,10 @@ pub struct Module<'m, V> {
     values: Vec<ValueDefinition<'m, V>>,
     tree: &'m Tree,
     invariants: Invariants,
-    expr_pool: Arena<Expr<'m, V>>,
-    node_pool: Arena<Node<'m>>,
-    pattern_pool: Arena<Pattern<'m, V>>,
-    interner: Interner<'m>,
+    expr_pool: &'m Arena<Expr<'m, V>>,
+    node_pool: &'m Arena<Node<'m>>,
+    pattern_pool: &'m Arena<Pattern<'m, V>>,
+    interner: &'m Interner<'m>,
 }
 
 /// A "wip" struct to create a Module.
@@ -31,9 +31,16 @@ pub struct ModuleWip<'m, 't, 's, V> {
     errs: Errors<'t>,
     val_sigs: Vec<(InternedStr<'m>, Type<'m>)>,
     val_defs: Vec<LetBinding<'m, &'m str>>,
-    expr_pool: Arena<Expr<'m, V>>,
-    pattern_pool: Arena<Pattern<'m, V>>,
-    node_pool: Arena<Node<'m>>,
+    expr_pool: &'m Arena<Expr<'m, V>>,
+    pattern_pool: &'m Arena<Pattern<'m, V>>,
+    node_pool: &'m Arena<Node<'m>>,
+    interner: &'m Interner<'m>,
+}
+
+pub struct Pools<'m, V> {
+    exprs: Arena<Expr<'m, V>>,
+    patterns: Arena<Pattern<'m, V>>,
+    nodes: Arena<Node<'m>>,
     interner: Interner<'m>,
 }
 
@@ -88,8 +95,13 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
             Some(n) => {
                 match n.kind() {
                     "unit" => {
-                        let n_ref = unsafe { std::mem::transmute(self.node_pool.alloc(n)) };
-                        Ok(Expr{get: Spanned{get: Lit(Unit), node: n_ref}})
+                        let n_ref = self.node_pool.alloc(n);
+                        Ok(Expr {
+                            get: Spanned {
+                                get: Lit(Unit),
+                                node: n_ref,
+                            },
+                        })
                     }
                     "integer" => {
                         // TODO: We should have our own standards for parsing,
@@ -97,32 +109,52 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
                         let i = self.get_str(n).parse::<i64>();
                         match i {
                             Ok(i) => {
-                                let n_ref = unsafe { std::mem::transmute(self.node_pool.alloc(n)) };
-                                Ok(Expr{get: Spanned{get: Lit(Int64(i)), node: n_ref}})
+                                let n_ref = self.node_pool.alloc(n);
+                                Ok(Expr {
+                                    get: Spanned {
+                                        get: Lit(Int64(i)),
+                                        node: n_ref,
+                                    },
+                                })
                             }
                             Err(e) => unimplemented!(),
                         }
-                    },
+                    }
                     "string" => {
                         let s = self.get_str(n).parse::<std::string::String>();
                         match s {
                             Ok(s) => {
                                 let istr = self.interner.insert(&s);
-                                let s_ref = unsafe { std::mem::transmute(self.interner.get_str_unchecked(istr)) };
-                                let n_ref = unsafe { std::mem::transmute(self.node_pool.alloc(n)) };
-                                Ok(Expr{get: Spanned{get: Lit(Literal::String(s_ref)), node: n_ref}})
+                                let s_ref: &'m str = self.interner.get_str_unchecked(istr);
+                                let n_ref: &'m Node<'m> = self.node_pool.alloc(n);
+                                Ok(Expr {
+                                    get: Spanned {
+                                        get: Lit(Literal::String(s_ref)),
+                                        node: n_ref,
+                                    },
+                                })
                             }
                             Err(e) => unimplemented!(),
                         }
-                    },
+                    }
                     "True" => {
-                        let n_ref = unsafe { std::mem::transmute(self.node_pool.alloc(n)) };
-                        Ok(Expr{get: Spanned{get: Lit(Bool(true)), node: n_ref}})
-                    },
+                        let n_ref = self.node_pool.alloc(n);
+                        Ok(Expr {
+                            get: Spanned {
+                                get: Lit(Bool(true)),
+                                node: n_ref,
+                            },
+                        })
+                    }
                     "False" => {
-                        let n_ref = unsafe { std::mem::transmute(self.node_pool.alloc(n)) };
-                        Ok(Expr{get: Spanned{get: Lit(Bool(false)), node: n_ref}})
-                    },
+                        let n_ref = self.node_pool.alloc(n);
+                        Ok(Expr {
+                            get: Spanned {
+                                get: Lit(Bool(false)),
+                                node: n_ref,
+                            },
+                        })
+                    }
                     _ => is_bad_err!(n, self.errs),
                 }
             }
@@ -495,22 +527,28 @@ impl<'m> Module<'m, &'m str> {
     pub fn from_cst<'t: 'm, 's: 't>(
         src: &'s str,
         tree: &'t Tree,
+        p: &'t mut Pools<&'m str>,
     ) -> Result<Module<'m, &'m str>, Errors<'t>> {
         let n = tree.root_node();
         if n.kind() != "source_file" {
             return Err(vec![BadCstError::is_unexpected_child(n)]);
         }
+        // let mut p = Pools {
+        //     exprs: Arena::with_capacity(2048),
+        //     patterns: Arena::with_capacity(512),
+        //     nodes: Arena::with_capacity(512),
+        //     interner: Interner::empty(),
+        // };
         let mut m = ModuleWip::<&str> {
             src: src,
             tree: tree,
             errs: vec![],
-            // TODO: Think about these numbers more carefully?
             val_sigs: Vec::with_capacity(32),
             val_defs: Vec::with_capacity(32),
-            expr_pool: Arena::with_capacity(2048),
-            pattern_pool: Arena::with_capacity(512),
-            node_pool: Arena::with_capacity(512),
-            interner: Interner::empty(),
+            expr_pool: &p.exprs,
+            pattern_pool: &p.patterns,
+            node_pool: &p.nodes,
+            interner: &mut p.interner,
         };
         for n in non_comment_children(&n) {
             match n.kind() {
