@@ -169,6 +169,9 @@ module.exports = grammar({
         literal_expression: $ => choice(
             $.unit,
             $.integer,
+            'True',
+            'False',
+            $.string,
         ),
 
         literal_pattern: $ => $.literal_expression,
@@ -176,7 +179,10 @@ module.exports = grammar({
         // Should we allow whitespace between the parens? Hmm...
         unit: $ => '()',
 
-        integer: $ => /[0-9](_?[0-9]*)/,
+        integer: $ => /-?[0-9](_?[0-9]*)/,
+
+        // Be maximally permissible here, returning errors later.
+        string: $ => /"((\\")|[^"])*"/,
 
         projection_expression: $  => prec.left(13, seq($.expression, '.', $.identifier)),
 
