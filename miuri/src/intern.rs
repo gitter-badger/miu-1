@@ -14,10 +14,10 @@ pub struct InternedStr<'i> {
     _region: PhantomData<&'i ()>,
 }
 
-/// An alternative to &str.
+/// An alternative to `&str`.
 ///
-/// It is guaranteed that the first byte of the struct will be 0.
-/// To make sure this invariant holds, we keep the len field private.
+/// It is guaranteed that the first byte of this struct will be 0.
+/// To make sure this invariant holds, we keep the `len` field private.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct StringRef {
@@ -82,6 +82,10 @@ struct SSOStringRef {
 }
 
 impl SSOStringRef {
+    /// NOTE: The bytes are assumed to be valid UTF-8 but this is not checked.
+    ///
+    /// The return value will always be Some on a 64-bit system.
+    /// On a 32-bit system, the string is limited to ~16MB size.
     pub unsafe fn new_unchecked(s: &[u8]) -> Option<SSOStringRef> {
         if s.len() == 0 {
             Some(SSOStringRef {
@@ -219,7 +223,10 @@ impl<'i> Interner<'i> {
         }
     }
 
-    pub fn get_str<'a, 'b: 'a>(&'b self, istr: InternedStr<'i>) -> Option<&'a str> {
+    pub fn get_str<'a, 'b: 'a>(
+        &'b self,
+        istr: InternedStr<'i>,
+    ) -> Option<&'a str> {
         let start = istr.start as usize;
         if istr.index >= INDEX_SENTINEL_VALUE {
             Some(self.huge_strings[start].as_str())
@@ -274,7 +281,8 @@ impl<'i> Interner<'i> {
                             &self.storage[si]
                                 .get(start..start + s.len())
                                 .unwrap(),
-                        ).unwrap()
+                        )
+                        .unwrap()
                     };
                     std::debug_assert!(start < u16::max_value() as usize);
                     istr = InternedStr {
