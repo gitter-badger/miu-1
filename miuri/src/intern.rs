@@ -190,7 +190,7 @@ impl<'i> Interner<'i> {
     pub fn new(ss: &[&str]) -> Self {
         let mut i = Self::empty();
         for s in ss.iter() {
-            i.insert(s).unwrap();
+            i.insert(s);
         }
         i
     }
@@ -231,11 +231,16 @@ impl<'i> Interner<'i> {
         }
     }
 
-    pub fn insert(&mut self, s: &str) -> Result<InternedStr<'i>, InternError> {
+    pub fn insert(&mut self, s: &str) -> InternedStr<'i> {
         let sref = match SSOStringRef::new(s) {
             Some(x) => x,
             None => {
-                return Err(InternError::StringTooLong);
+                panic!(
+                    "Attempted to intern a string of size {} \
+                     bytes but the limit is {} bytes.",
+                    s.len(),
+                    StringRef::MAX_LEN
+                );
             }
         };
 
@@ -252,7 +257,7 @@ impl<'i> Interner<'i> {
         use std::collections::hash_map::RawEntryMut;
 
         match raw_ent {
-            RawEntryMut::Occupied(o) => Ok(*o.get()),
+            RawEntryMut::Occupied(o) => *o.get(),
             RawEntryMut::Vacant(v) => {
                 let istr: InternedStr;
                 let new_key: SSOStringRef;
@@ -316,7 +321,7 @@ impl<'i> Interner<'i> {
                     };
                 }
                 v.insert_hashed_nocheck(hash_value, new_key, istr);
-                Ok(istr)
+                istr
             }
         }
     }
