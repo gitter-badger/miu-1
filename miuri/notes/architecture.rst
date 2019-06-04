@@ -62,10 +62,11 @@ Where does macro expansion go?
 * First, I want to have a very fast compiler
   - Elm-like subset
     - Rank-1 polymorphism
+    - Lazy values
     - Anonymous records with no extension/subtyping
     - Minimal global inference, bidirectional type-checking
   - Compile to x86_64 at 100k lines/sec or faster with non-trivial
-    instruction selection and register allocation
+    instruction selection and register allocation.
   - No incrementality
   - We keep the tree-sitter parser for now, unless it proves to
     be taking a significant chunk of time.
