@@ -44,30 +44,24 @@ pub struct Pools<'m, V> {
     interner: Interner<'m>,
 }
 
-macro_rules! is_bad {
-    ( $x:expr, $e:expr ) => {
-        return ($e).push(BadCstError::is_unexpected_child($x));
+macro_rules! bad_cst {
+    ( $i:ident, $x:expr, $e:expr ) => {
+        ($e).push(BadCstError::$i($x))
     };
 }
 
-macro_rules! is_bad_err {
-    ( $x:expr, $e:expr ) => {{
-        ($e).push(BadCstError::is_unexpected_child($x));
-        return Err(());
-    }};
-}
-
-macro_rules! has_bad {
+macro_rules! bad_cst_child {
     ( $x:expr, $e:expr ) => {
-        return ($e).push(BadCstError::has_unexpected_children($x));
+        ($e).push(BadCstError::is_unexpected_child($x)).map(|x| x)
     };
 }
 
-macro_rules! has_bad_err {
-    ( $x:expr, $e:expr ) => {{
-        ($e).push(BadCstError::has_unexpected_children($x));
-        return Err(());
-    }};
+// This seems like a misnomer :(
+macro_rules! bad_cst_parent {
+    ( $x:expr, $e:expr ) => {
+        ($e).push(BadCstError::has_unexpected_children($x))
+            .map(|x| x)
+    };
 }
 
 impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
@@ -85,80 +79,60 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
         unimplemented!()
     }
 
+    // TODO: We should have our own standards for parsing,
+    // and not blindly use Rust's defaults.
+    fn parse_integer(s: &str) -> Option<i64> {
+        s.parse::<i64>().ok()
+    }
+
+    // TODO: We should have our own standards for parsing strings,
+    // and not blindly use Rust's defaults.
+    fn parse_string(s: &str) -> Option<String> {
+        s.parse::<std::string::String>().ok()
+    }
+
     fn process_literal_expression(
         &mut self,
         n: Node<'t>,
     ) -> Result<Expr<'m, &'m str>, ()> {
         use ExprCases::*;
         use Literal::*;
+        macro_rules! ok_expr {
+            ($x:expr) => {
+                Ok(Expr {
+                    get: Spanned {
+                        get: Lit($x),
+                        node: self.node_pool.alloc(n),
+                    },
+                })
+            };
+        };
         match n.child(0) {
-            Some(n) => {
-                match n.kind() {
-                    "unit" => {
-                        let n_ref = self.node_pool.alloc(n);
-                        Ok(Expr {
-                            get: Spanned {
-                                get: Lit(Unit),
-                                node: n_ref,
-                            },
-                        })
+            Some(n) => match n.kind() {
+                "unit" => ok_expr!(Unit),
+                "integer" => match Self::parse_integer(self.get_str(n)) {
+                    Some(i) => ok_expr!(Int64(i)),
+                    None => unimplemented!(),
+                },
+                "string" => match Self::parse_string(self.get_str(n)) {
+                    Some(s) => {
+                        let istr = self.interner.insert(&s);
+                        let sref = self.interner.get_str_unchecked(istr);
+                        ok_expr!(Literal::String(sref))
                     }
-                    "integer" => {
-                        // TODO: We should have our own standards for parsing,
-                        // not use Rust's defaults.
-                        let i = self.get_str(n).parse::<i64>();
-                        match i {
-                            Ok(i) => {
-                                let n_ref = self.node_pool.alloc(n);
-                                Ok(Expr {
-                                    get: Spanned {
-                                        get: Lit(Int64(i)),
-                                        node: n_ref,
-                                    },
-                                })
-                            }
-                            Err(e) => unimplemented!(),
-                        }
-                    }
-                    "string" => {
-                        let s = self.get_str(n).parse::<std::string::String>();
-                        match s {
-                            Ok(s) => {
-                                let istr = self.interner.insert(&s);
-                                let s_ref: &'m str = self.interner.get_str_unchecked(istr);
-                                let n_ref: &'m Node<'m> = self.node_pool.alloc(n);
-                                Ok(Expr {
-                                    get: Spanned {
-                                        get: Lit(Literal::String(s_ref)),
-                                        node: n_ref,
-                                    },
-                                })
-                            }
-                            Err(e) => unimplemented!(),
-                        }
-                    }
-                    "True" => {
-                        let n_ref = self.node_pool.alloc(n);
-                        Ok(Expr {
-                            get: Spanned {
-                                get: Lit(Bool(true)),
-                                node: n_ref,
-                            },
-                        })
-                    }
-                    "False" => {
-                        let n_ref = self.node_pool.alloc(n);
-                        Ok(Expr {
-                            get: Spanned {
-                                get: Lit(Bool(false)),
-                                node: n_ref,
-                            },
-                        })
-                    }
-                    _ => is_bad_err!(n, self.errs),
-                }
-            }
-            _ => has_bad_err!(n, self.errs),
+                    None => self.errs.push(BadCstError {
+                        reason: ErrorDetails::UserError(
+                            UserError::IllFormedString,
+                        ),
+                        bad_node: n,
+                    }),
+                },
+                "True" => ok_expr!(Bool(true)),
+                "False" => ok_expr!(Bool(false)),
+
+                _ => bad_cst_child!(n, self.errs),
+            },
+            _ => bad_cst_parent!(n, self.errs),
         }
     }
 
@@ -175,7 +149,7 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
                     })),
                 })
             }
-            _ => has_bad_err!(n, self.errs),
+            _ => bad_cst_parent!(n, self.errs),
         }
     }
 
@@ -188,7 +162,7 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
                 for n in n.children().skip(1) {}
                 Err(())
             }
-            _ => has_bad_err!(n, self.errs),
+            _ => bad_cst_parent!(n, self.errs),
         }
     }
 
@@ -196,7 +170,7 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
         &mut self,
         pat: Pattern<'m, &'m str>,
     ) -> Result<Binding<'m, &'m str>, ()> {
-        panic!()
+        unimplemented!()
     }
 
     fn process_record_pattern(
@@ -215,17 +189,17 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
                 "literal_pattern" => self.process_literal_pattern(n),
                 "(" => match n.next_sibling() {
                     Some(n) if n.kind() == "pattern" => self.process_pattern(n),
-                    _ => has_bad_err!(n, self.errs),
+                    _ => bad_cst_parent!(n, self.errs),
                 },
                 "eliminator_pattern" => self.process_eliminator_pattern(n),
                 "record_pattern" => self.process_record_pattern(n),
-                _ => is_bad_err!(n, self.errs),
+                _ => bad_cst_child!(n, self.errs),
             },
-            _ => has_bad_err!(n, self.errs),
+            _ => bad_cst_parent!(n, self.errs),
         }
     }
 
-    fn process_let_binding(&mut self, n: Node<'t>) {
+    fn process_let_binding(&mut self, n: Node<'t>) -> Result<(), ()> {
         let mut is_recursive = false;
         let mut i = 1;
         match n.child(i) {
@@ -235,9 +209,13 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
                     i += 1;
                 }
                 "binding" => {}
-                _ => is_bad!(c, self.errs),
+                _ => {
+                    return bad_cst_child!(c, self.errs);
+                }
             },
-            None => has_bad!(n, self.errs),
+            None => {
+                return bad_cst_parent!(n, self.errs);
+            }
         }
         let bind = match n.child(i) {
             Some(n) if i == 2 || n.kind() == "binding" => match n.child(0) {
@@ -250,22 +228,27 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
                             Ok(bind) => bind,
                             _ => {
                                 // TODO: record an error here...
-                                return;
+                                return unimplemented!();
                             }
                         },
                         _ => {
                             // TODO: record an error here...
-                            return;
+                            return unimplemented!();
                         }
                     }
                 }
-                _ => has_bad!(n, self.errs),
+                _ => {
+                    return bad_cst_parent!(n, self.errs);
+                }
             },
-            _ => has_bad!(n, self.errs),
+            _ => {
+                return bad_cst_parent!(n, self.errs);
+            }
         };
+        unimplemented!()
     }
 
-    fn process_top_value_signature(&mut self, n: Node<'t>) {
+    fn process_top_value_signature(&mut self, n: Node<'t>) -> Result<(), ()> {
         match (n.child(1), n.child(3)) {
             (Some(i), Some(t))
                 if i.kind() == "identifier" && t.kind() == "type" =>
@@ -273,9 +256,12 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
                 if let Ok(ty) = self.process_type(t) {
                     let istr = self.get_istr(n);
                     self.val_sigs.push((istr, ty));
+                    Ok(())
+                } else {
+                    unimplemented!()
                 }
             }
-            _ => has_bad!(n, self.errs),
+            _ => bad_cst_parent!(n, self.errs),
         }
     }
 }
@@ -489,39 +475,64 @@ enum RecordField<'m, V> {
 }
 
 #[derive(Debug)]
-pub enum BadCstError<'a> {
-    InternalError(InternalErrorReason, Node<'a>),
-    UserError(UserErrorReason, Node<'a>),
-}
-
-impl<'a> BadCstError<'a> {
-    fn is_unexpected_child(n: Node<'a>) -> BadCstError<'a> {
-        BadCstError::InternalError(InternalErrorReason::IsUnexpectedChild, n)
-    }
-    fn has_unexpected_children(n: Node<'a>) -> BadCstError<'a> {
-        BadCstError::InternalError(
-            InternalErrorReason::HasUnexpectedChildren,
-            n,
-        )
-    }
+pub struct BadCstError<'a> {
+    reason: ErrorDetails,
+    bad_node: Node<'a>,
 }
 
 #[derive(Debug)]
-pub enum InternalErrorReason {
+pub enum ErrorDetails {
+    InternalError(InternalError),
+    UserError(UserError),
+}
+
+#[derive(Debug)]
+pub enum InternalError {
     IsUnexpectedChild,
     HasUnexpectedChildren,
 }
 
 #[derive(Debug)]
-pub enum UserErrorReason {
+pub enum UserError {
     IllFormedInteger,
+    IllFormedString,
+}
+
+use self::ErrorDetails::*;
+use self::InternalError::*;
+use self::UserError::*;
+
+impl<'a> BadCstError<'a> {
+    fn is_unexpected_child(n: Node<'a>) -> BadCstError<'a> {
+        BadCstError {
+            reason: InternalError(IsUnexpectedChild),
+            bad_node: n,
+        }
+    }
+    fn has_unexpected_children(n: Node<'a>) -> BadCstError<'a> {
+        BadCstError {
+            reason: InternalError(HasUnexpectedChildren),
+            bad_node: n,
+        }
+    }
 }
 
 fn non_comment_children<'a>(n: &Node<'a>) -> impl Iterator<Item = Node<'a>> {
     n.children().filter(|n| n.kind() != "comment")
 }
 
-type Errors<'a> = Vec<BadCstError<'a>>;
+#[derive(Debug)]
+pub struct Errors<'a>(Vec<BadCstError<'a>>);
+
+impl<'a> Errors<'a> {
+    fn new(v: Vec<BadCstError<'a>>) -> Errors<'a> {
+        Errors(v)
+    }
+    fn push<T>(&mut self, err: BadCstError<'a>) -> Result<T, ()> {
+        self.0.push(err);
+        Err(())
+    }
+}
 
 impl<'m> Module<'m, &'m str> {
     pub fn from_cst<'t: 'm, 's: 't>(
@@ -531,7 +542,7 @@ impl<'m> Module<'m, &'m str> {
     ) -> Result<Module<'m, &'m str>, Errors<'t>> {
         let n = tree.root_node();
         if n.kind() != "source_file" {
-            return Err(vec![BadCstError::is_unexpected_child(n)]);
+            return Err(Errors::new(vec![BadCstError::is_unexpected_child(n)]));
         }
         // let mut p = Pools {
         //     exprs: Arena::with_capacity(2048),
@@ -542,7 +553,7 @@ impl<'m> Module<'m, &'m str> {
         let mut m = ModuleWip::<&str> {
             src: src,
             tree: tree,
-            errs: vec![],
+            errs: Errors::new(vec![]),
             val_sigs: Vec::with_capacity(32),
             val_defs: Vec::with_capacity(32),
             expr_pool: &p.exprs,
@@ -556,25 +567,27 @@ impl<'m> Module<'m, &'m str> {
                     for n in non_comment_children(&n) {
                         match n.kind() {
                             "top_value_signature" => {
-                                m.process_top_value_signature(n)
+                                m.process_top_value_signature(n);
                             }
                             "top_value_definition" => {}
                             "top_type_signature" => {}
                             "top_type_definition" => {}
                             _ => {
-                                m.errs.push(BadCstError::is_unexpected_child(n))
+                                let _: Result<(), _> =
+                                    bad_cst_child!(n, m.errs);
                             }
                         }
                     }
                 }
                 _ => {
-                    let ret = Err(vec![BadCstError::is_unexpected_child(n)]);
+                    let ret =
+                        Errors::new(vec![BadCstError::is_unexpected_child(n)]);
                     println!("{:?}", ret);
-                    return ret;
+                    return Err(ret);
                 }
             }
         }
-        return Err(vec![]);
+        return Err(Errors::new(vec![]));
     }
 }
 
