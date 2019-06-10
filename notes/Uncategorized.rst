@@ -6,6 +6,11 @@ Packages
 
 We have a 3 tier system like Hackage, Stackage nightly and Stackage LTS.
 
+Some key things that a package page should show:
+
+* Changes in functions transitively calling ``unsafeOk`` (or equivalent)
+  between versions.
+
 Versioning
 ==========
 * Versioning is hard to do manually, let's automate as much as possible.
@@ -43,6 +48,36 @@ reasonable time (e.g. we should expect to run this once every week at the
 minimum). This means we can create "tentative releases" after applying the
 autofix, which the library author can approve with a click.
 And maybe send a pull/merge request automatically...
+
+Note: Watching Jon Cohen's CppCon 2017 talk
+`A Type, by Any Other Name <https://www.youtube.com/watch?v=ely_hVVZjEU>`_
+is highly recommended. It talks about doing non-atomic refactoring like the
+ones we expect to do with an autofix tool.
+
+Security
+========
+
+Compile time IO
+---------------
+
+For one reason or another, a package might want to do IO at compile time.
+In most cases, this shouldn't be a thing, an effectful value should be exposed
+instead. For example, if you want to provide a data table loaded from a large
+file, it should be exposed as (strawman syntax)::
+
+    let myDataTable : [IO, Abort] DataTable
+    let myDataTable = abortIfError (parseIntoDataTable (loadCSV "data/table.csv"))
+
+Then an application developer can always use::
+
+    static dataTable = runStatic myDataTable
+
+The application developer can blacklist the transitive use of ``runStatic`` in
+dependencies, with optional whitelisting for specific versions of specific
+packages.
+
+This idea is called "compilation safety" in the Safe Haskell documentation.
+https://downloads.haskell.org/~ghc/7.8.4/docs/html/users_guide/safe-haskell.html
 
 Commercial users
 ================
