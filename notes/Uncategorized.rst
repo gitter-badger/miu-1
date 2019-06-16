@@ -1,6 +1,8 @@
 Key influence:
 * Titus Winters, "C++ as a Live at Head Language" CppCon 2017 (`YouTube <https://www.youtube.com/watch?v=tISy7EJQPzI>`_)
 
+(TODO: I should write a summary of the talk.)
+
 Packages
 ========
 
@@ -89,3 +91,42 @@ Commercial users
   a concern, they should run "analysis scripts" so that we can understand how
   much of an impact the changes should have. If you cannot run a script,
   your code will not be weighed when considering the impact of breaking changes.
+
+Non-goals
+=========
+
+Being highly opinionated about style
+------------------------------------
+
+1. The compiler shouldn't be scolding people for "bad style".
+
+2. The core tools should be somewhat configurable. Ideally, they should be
+   designed as wrappers around a library. However, that isn't an excuse
+   for having bad defaults. We should strive to have good defaults for all
+   tools, such as linters and formatters.
+
+Some of this is social too. People shouldn't be criticized for turning off
+compiler/linter warnings or using a different style if they feel more
+comfortable with that. A soft suggestion or hint is fine, but they should be
+allowed to write their code the way they want to.
+
+We can certainly provide API guidelines, but not following them shouldn't
+be a big deal. These are guidelines, not commandments.
+
+A "fits in your head" language
+------------------------------
+
+1. It is perfectly fine if teams pick subsets of the language that they want
+   to stick to, for ease of onboarding or similar. However, if they're doing
+   this due to problems with tools (e.g. bad compile times), that should be
+   communicated and taken as a point of concern.
+
+   The boundaries should be set by people voluntarily, not due to limitations
+   of the tools they have.
+
+2. It should be easy to know where to look/who to ask for a given piece of
+   information. Accessibility, communication and transparency are valued.
+
+However, this isn't an excuse for having a hard-to-learn language. I think it
+would be valuable to have a standard library for on-boarding people relatively
+new to FP that exercises fewer features, to make the learning curve more gentle.
