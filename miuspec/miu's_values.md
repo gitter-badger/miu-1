@@ -83,6 +83,15 @@ One of the reasons laziness is not used all that often in strict languages is
 because it is unwieldy. We should explore ways to make it easier to use, such
 as Idris's automatic insertion.
 
+### Modularity
+
+Modularity is a key aspect of composability. We should be able to put two
+units ("modules") together, pick and choose which parts we want from each,
+and use both in the same program.
+
+Specifically, this rules out the use of Haskell-style type classes, or any
+similar language features which enforce global requirements.
+
 ## Expressiveness
 
 Initially, the main reason I started out to create a new language because I
