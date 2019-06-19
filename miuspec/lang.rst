@@ -228,6 +228,14 @@ We need a lot of bracket forms :(
            suspensions (``{ }``?, ``~( )``?), units of measure (?),
            sequences (?), quasiquotes (?), macros (?)
 
+Right now, I'm thinking that from a consistency POV, it probably makes the most
+sense to have ``(| |)`` for (anonymous) rows, ``{| |}`` for (anonymous) records
+and ``[| |]`` for (anonymous) variants. So we probably want to pick something
+else for refinements...
+
+Should we leave "space" in the syntax for potentially adding staging constructs?
+As a feature, staging is very cool, but I don't really know much about it tbh...
+
 Operators
 =========
 
