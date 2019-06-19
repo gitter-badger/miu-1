@@ -12,7 +12,8 @@ corresponding module permits specialization or not.)
 
 Note: The term "repr" is used as shorthand for "type representation" in this
 document. While we could just as well say "size" as that is the implementation
-we're planning to use, the detail that repr = size is not really relevant.
+we're planning to use (at least, for most types), the detail that repr = size
+is not really relevant.
 
 Lowest three bits -
   * xx0 -> Int/Nat
@@ -69,7 +70,25 @@ There are two kinds -
           -> {| a : PrimArray t | inBounds i a |}
           -> {| a : PrimArray t | inBounds i a |}
 
+  For languages like OCaml and Haskell, FFI can be expensive if types are
+  getting converted across the boundary. Can we avoid this, as well as
+  have good ergonomics? For example, if you look at
+  `ocaml cstruct <https://github.com/mirage/ocaml-cstruct>`_,
+  it doesn't look very ergonomic as one has to use getters and setters).
+
+  TODO: Add some information on how we handle separate compilation with types of
+  kind ``PrimType``. While monomorphizing for types of kind ``PrimType`` should
+  be allowed, separate compilation should also be possible, otherwise people
+  will actively avoid using ``PrimType``. One possible solution (I think?) is
+  that we pass alignment along with the size (specifically for ``PrimType``).
+  For example, add alignment information in the top bits. Computing the new
+  size and new alignment on combination can be done with a few instructions.
+  Sixten did this initially but not later on.
+
+  Related: TODO[Polymorphism with PrimType])
+
 --
+
 Aside: What are the advantages and disadvantages of having two kinds with
 similar types (e.g. Int vs Int64#)?
 
@@ -81,7 +100,8 @@ similar types (e.g. Int vs Int64#)?
    If everything is monomorphic, then using types from ``PrimType`` means you
    have less overhead/more flexibility. However, if you suddenly want to use
    a polymorphic function, then you need to use a type from ``Type``.
-   (TODO: Add some examples here)
+   (TODO[Polymorphism with PrimType]: Add some examples here)
+
 --
 
 NOTE: Passing reprs across module boundaries *implicitly* breaks separate
