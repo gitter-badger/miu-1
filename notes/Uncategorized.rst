@@ -92,6 +92,30 @@ Commercial users
   much of an impact the changes should have. If you cannot run a script,
   your code will not be weighed when considering the impact of breaking changes.
 
+Professional conduct
+====================
+
+A Code of Conduct is a fairly low bar for what constitutes acceptable behavior.
+
+We should incorporate language in the CoC or add a "Code of professional conduct"
+that is broader. For example, if someone shares a talk video, it is not
+appropriate to comment on people's physical appearance, or make derogatory
+remarks about speech or body language.
+
+Some examples:
+
+* "I was so distracted because the speaker is so cute." is not an appropriate comment.
+
+* "I'm having difficulty understanding the speaker at 3:30, could someone explain
+  what is being said?" is okay.
+
+* "The speaker's thick accent makes it impossible to understand what is going on."
+  is not appropriate.
+
+* "The speaker has really good English." for (say) an Asian speaker is not appropriate.
+
+First offence - warning. Second offence - 1 month suspension (say). Third offence - ban.
+
 Non-goals
 =========
 
