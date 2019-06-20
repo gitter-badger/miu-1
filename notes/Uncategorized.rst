@@ -10,8 +10,25 @@ We have a 3 tier system like Hackage, Stackage nightly and Stackage LTS.
 
 Some key things that a package page should show:
 
+* API diff: Generated automatically.
 * Changes in functions transitively calling ``unsafeOk`` (or equivalent)
   between versions.
+
+First-time publishing
+---------------------
+
+Unlike crates.io/hackage/npm/most package repositories, publishing a package
+for the first time needs to go through a review process.
+
+* Zero name-squatting tolerance policy.
+* You cannot publish "micro-packages" like "is-red" or similar.
+* If you're taking up a common name, there is a higher bar. For example, if you
+  publish a package called ``graphql``, it is expected that you're providing
+  fairly complete coverage of how a user might want to interact with a GraphQL
+  API. If you don't have a fairly complete implementation, then you can use a
+  unique name (e.g. ``graph-qualia``), which has a lower bar.
+
+Subsequent versions of the same package do not need to go through such review.
 
 Versioning
 ==========
