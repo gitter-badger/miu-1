@@ -4,11 +4,12 @@ Project organization
 * ``miudoc``   - documentation
 * ``miuri``    - compiler (Rust)
 * ``miuhi``    - prototyping compiler (Haskell)
-* ``miumiugo`` - code search
 * ``miuspec``  - specification
 * ``numark``   - markup language
 * ``sanna``    - build system for all the projects (including itself)
-* ``sojiro``   - editor services
+
+Some other project names for the future: miumiugo (code search),
+sojiro (editor services), cumiulus (package repository).
 
 Guidelines
 **********

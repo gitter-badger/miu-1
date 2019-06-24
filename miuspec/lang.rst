@@ -34,7 +34,7 @@ Principles
    ``|``, "No unifying theme
             or (``|``, ``||``),
             application (``|>``, ``>|>``),
-            such that (comprehension/refinement)", ""
+            such that (comprehension)", ""
    "``,``", "sequence", ""
    ``*``, "applicative (``>*>``)", ""
    ``;``, "monadic (``>;>``)", ""
@@ -44,7 +44,7 @@ Principles
    ``->``, "function arrow, then (if/case)", ""
    ``->?``, "pattern", ""
    ``#``, "primitive", ""
-   ``@``, "optics?, type applications? memory address?", ""
+   ``@``, "optics?, type applications? memory address? refinement?", ""
    ``^``, "", ""
 
 ****************
@@ -223,10 +223,18 @@ We need a lot of bracket forms :(
 1. Types - Rows (?), Records (``{ }``?), Variants (?), Tuples (?)
            effects (prefix ``[ ]``?), units of measure (postfix ``[ ]``),
            implicit arguments (?),
-           refinements (``{| |}``?)
+           refinements (``{@ @}``?)
 2. Terms - Rows (?), Records ``{ }``, Variants (?), Tuples (?),
            suspensions (``{ }``?, ``~( )``?), units of measure (?),
            sequences (?), quasiquotes (?), macros (?)
+
+Right now, I'm thinking that from a consistency POV, it probably makes the most
+sense to have ``(| |)`` for (anonymous) rows, ``{| |}`` for (anonymous) records
+and ``[| |]`` for (anonymous) variants. So we probably want to pick something
+else for refinements...
+
+Should we leave "space" in the syntax for potentially adding staging constructs?
+As a feature, staging is very cool, but I don't really know much about it tbh...
 
 Operators
 =========
@@ -411,6 +419,9 @@ adding a bunch of sugar.
 
 ``do`` blocks
 -------------
+
+Indexing syntax
+---------------
 
 Record updates
 --------------
