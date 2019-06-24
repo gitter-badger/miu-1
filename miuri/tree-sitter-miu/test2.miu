@@ -1,0 +1,6 @@
+let x a b c = 10
+let f (Cons x xs) = 100
+let r0 = t .x.y.z  -- equivalent to t .x.y.z, not t.x.y.z
+let r1 = (t).x.y.z -- equivalent to t .x.y.z, not t.x.y.z
+let r2 = t.x y.z
+let r3 = t .x .y.z

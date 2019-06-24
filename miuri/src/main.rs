@@ -2,14 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-extern crate miuri;
-extern crate pretty;
-extern crate ramp;
-extern crate tree_sitter;
-
-// use miuri::test;
 use pretty::{BoxDoc, Doc};
-
 use tree_sitter::{Node, Parser};
 
 use std::io::Read;
@@ -65,7 +58,7 @@ fn main() -> std::io::Result<()> {
     parser.set_language(language).unwrap();
     let mut source_code: String = "".to_string();
     println!("{}", std::env::current_dir()?.display());
-    std::io::BufReader::new(std::fs::File::open("tree-sitter-miu/test.miu")?)
+    std::io::BufReader::new(std::fs::File::open("tree-sitter-miu/test2.miu")?)
         .read_to_string(&mut source_code)?;
     let tree = parser.parse(&source_code, None).unwrap();
     println!("{}", tree.root_node().to_sexp());

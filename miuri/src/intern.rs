@@ -4,24 +4,31 @@
 
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash, Hasher};
+use std::marker::PhantomData;
+use std::cell::RefCell;
 
 #[derive(Copy, Clone)]
-pub struct InternedStr {
+pub struct InternedStr<'i> {
     index: u32,
     start: u16,
     len: u16,
+    _region: PhantomData<&'i ()>,
 }
 
-/// An alternative to &str.
+/// An alternative to `&str`.
 ///
-/// It is guaranteed that the first byte of the struct will be 0.
-/// To make sure this invariant holds, we keep the len field private.
+/// It is guaranteed that the first byte of this struct will be 0.
+/// To make sure this invariant holds, we keep the `len` field private.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct StringRef {
     len: usize,
     pub ptr: *const u8,
 }
+
+// This is ok, because all the fields of the InternerInner struct will be live
+// at the same time (barring drop order).
+unsafe impl Send for StringRef {}
 
 impl StringRef {
     pub const LEN_BYTES: usize = std::mem::size_of::<usize>();
@@ -80,6 +87,10 @@ struct SSOStringRef {
 }
 
 impl SSOStringRef {
+    /// NOTE: The bytes are assumed to be valid UTF-8 but this is not checked.
+    ///
+    /// The return value will always be Some on a 64-bit system.
+    /// On a 32-bit system, the string is limited to ~16MB size.
     pub unsafe fn new_unchecked(s: &[u8]) -> Option<SSOStringRef> {
         if s.len() == 0 {
             Some(SSOStringRef {
@@ -172,8 +183,12 @@ const INDEX_SENTINEL_VALUE: u32 = u32::max_value();
 
 const STORAGE_CHUNK_SIZE: usize = u16::max_value() as usize;
 
-pub struct Interner {
-    indices: HashMap<SSOStringRef, InternedStr>,
+pub struct Interner<'i> {
+    get: RefCell<InternerInner<'i>>,
+}
+
+pub struct InternerInner<'i> {
+    indices: HashMap<SSOStringRef, InternedStr<'i>>,
     bytes_left: usize,
     storage: Vec<[u8; STORAGE_CHUNK_SIZE]>,
     huge_strings: Vec<String>,
@@ -184,17 +199,49 @@ pub enum InternError {
     StringTooLong,
 }
 
-impl Interner {
+impl<'i> Interner<'i> {
+    pub fn new(ss: &[&str]) -> Self {
+        Interner{get: RefCell::new(InternerInner::new(ss))}
+    }
+
+    pub fn empty() -> Self {
+        Interner{get: RefCell::new(InternerInner::empty())}
+    }
+
+    pub fn get_str_unchecked(&self, istr: InternedStr<'i>) -> &str {
+        let iref = self.get.borrow();
+        // Same justification as in get_str
+        unsafe { std::mem::transmute::<&str, &str>(iref.get_str_unchecked(istr)) }
+    }
+
+    // TODO: I'm not really sure if this is needed...
+    pub fn get_str(&self, istr: InternedStr<'i>) -> Option<&str> {
+        let iref = self.get.borrow();
+        // The same rationale as used in typed-arena applies here.
+        // See https://docs.rs/typed-arena/1.4.1/src/typed_arena/lib.rs.html#215
+        //
+        // Extend the lifetime from that of `iref` to that of `self`.
+        // This is OK because we’re careful to never move items
+        // by never moving the inner arrays.
+        unsafe { std::mem::transmute::<Option<&str>, Option<&str>>(iref.get_str(istr)) }
+    }
+
+    pub fn insert(&self, s: &str) -> InternedStr<'i> {
+        self.get.borrow_mut().insert(s)
+    }
+}
+
+impl<'i> InternerInner<'i> {
     pub fn new(ss: &[&str]) -> Self {
         let mut i = Self::empty();
         for s in ss.iter() {
-            i.insert(s).unwrap();
+            i.insert(s);
         }
         i
     }
 
     pub fn empty() -> Self {
-        Interner {
+        InternerInner {
             indices: HashMap::new(),
             bytes_left: STORAGE_CHUNK_SIZE,
             storage: vec![],
@@ -202,10 +249,10 @@ impl Interner {
         }
     }
 
-    pub fn get_str_unchecked<'a, 'b: 'a>(
-        &'b self,
-        istr: InternedStr,
-    ) -> &'a str {
+    pub fn get_str_unchecked(
+        &self,
+        istr: InternedStr<'i>,
+    ) -> &str {
         let start = istr.start as usize;
         if istr.index >= INDEX_SENTINEL_VALUE {
             self.huge_strings[start].as_str()
@@ -217,7 +264,10 @@ impl Interner {
         }
     }
 
-    pub fn get_str<'a, 'b: 'a>(&'b self, istr: InternedStr) -> Option<&'a str> {
+    pub fn get_str(
+        &self,
+        istr: InternedStr<'i>,
+    ) -> Option<&str> {
         let start = istr.start as usize;
         if istr.index >= INDEX_SENTINEL_VALUE {
             Some(self.huge_strings[start].as_str())
@@ -229,11 +279,16 @@ impl Interner {
         }
     }
 
-    pub fn insert(&mut self, s: &str) -> Result<InternedStr, InternError> {
+    pub fn insert(&mut self, s: &str) -> InternedStr<'i> {
         let sref = match SSOStringRef::new(s) {
             Some(x) => x,
             None => {
-                return Err(InternError::StringTooLong);
+                panic!(
+                    "Attempted to intern a string of size {} \
+                     bytes but the limit is {} bytes.",
+                    s.len(),
+                    StringRef::MAX_LEN
+                );
             }
         };
 
@@ -250,7 +305,7 @@ impl Interner {
         use std::collections::hash_map::RawEntryMut;
 
         match raw_ent {
-            RawEntryMut::Occupied(o) => Ok(*o.get()),
+            RawEntryMut::Occupied(o) => *o.get(),
             RawEntryMut::Vacant(v) => {
                 let istr: InternedStr;
                 let new_key: SSOStringRef;
@@ -267,13 +322,15 @@ impl Interner {
                             &self.storage[si]
                                 .get(start..start + s.len())
                                 .unwrap(),
-                        ).unwrap()
+                        )
+                        .unwrap()
                     };
                     std::debug_assert!(start < u16::max_value() as usize);
                     istr = InternedStr {
                         index: si as u32,
                         start: start as u16,
                         len: s.len() as u16,
+                        _region: PhantomData,
                     };
                 } else if s.len() <= STORAGE_CHUNK_SIZE {
                     let si = self.storage.len();
@@ -297,6 +354,7 @@ impl Interner {
                         index: si as u32,
                         start: 0,
                         len: s.len() as u16,
+                        _region: PhantomData,
                     };
                 } else {
                     let ix = self.huge_strings.len();
@@ -308,10 +366,11 @@ impl Interner {
                         index: INDEX_SENTINEL_VALUE,
                         start: ix as u16,
                         len: 0,
+                        _region: PhantomData,
                     };
                 }
                 v.insert_hashed_nocheck(hash_value, new_key, istr);
-                Ok(istr)
+                istr
             }
         }
     }
