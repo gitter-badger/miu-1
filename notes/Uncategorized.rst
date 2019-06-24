@@ -141,9 +141,18 @@ Code of ethics
  this looks like, but I do not want the project to cooperate with particular
  potential users. I don't know where we will draw the boundaries. I don't know
  how we will draw the boundaries. But I would be, for example, be extremely
- uncomfortable with Miu being used for military applications, for example.)
+ uncomfortable with Miu being used for military applications.
+ However, the fact that it is hard, if not impossible to draw exact boundaries,
+ should NOT prevent us from ruling particular things out.)
 
-Fwiw, here's a policy from a knitting community: https://www.ravelry.com/content/no-trump
+ACM `code of ethics <https://ethics.acm.org/code-of-ethics/>`_
+
+Ravelry (knitting community) has a `No Trump policy <https://www.ravelry.com/content/no-trump>`_
+
+Bryan Cantrill's talk on ethical dilemmas: https://www.youtube.com/watch?v=0wtvQZijPzg
+
+Unlike the ACM code, the Ravelry policy is much more concrete, with examples
+of behavior that are unacceptable.
 
 Non-goals
 =========
