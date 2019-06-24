@@ -129,9 +129,21 @@ Some examples:
 * "The speaker's thick accent makes it impossible to understand what is going on."
   is not appropriate.
 
-* "The speaker has really good English." for (say) an Asian speaker is not appropriate.
-
 First offence - warning. Second offence - 1 month suspension (say). Third offence - ban.
+
+Q: How should microaggressions like saying "The speaker has really good English."
+   for (say) an Asian speaker be handled?
+
+Code of ethics
+==============
+
+(The section title "Code of ethics" is a placeholder. I'm not really sure what
+ this looks like, but I do not want the project to cooperate with particular
+ potential users. I don't know where we will draw the boundaries. I don't know
+ how we will draw the boundaries. But I would be, for example, be extremely
+ uncomfortable with Miu being used for military applications, for example.)
+
+Fwiw, here's a policy from a knitting community: https://www.ravelry.com/content/no-trump
 
 Non-goals
 =========
@@ -171,3 +183,6 @@ A "fits in your head" language
 However, this isn't an excuse for having a hard-to-learn language. I think it
 would be valuable to have a standard library for on-boarding people relatively
 new to FP that exercises fewer features, to make the learning curve more gentle.
+
+Since modules are so fundamental, it might even be helpful to have the "starter
+library" be a specialized version of the standard library.
