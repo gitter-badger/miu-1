@@ -28,7 +28,7 @@ pub struct Module<'m, V> {
 pub struct ModuleWip<'m, 't, 's, V> {
     src: &'s str,
     tree: &'t Tree,
-    errs: Errors<'t>,
+    errs: Errors<'m>,
     val_sigs: Vec<(InternedStr<'m>, Type<'m>)>,
     val_defs: Vec<LetBinding<'m, &'m str>>,
     expr_pool: &'m Arena<Expr<'m, V>>,
@@ -48,6 +48,17 @@ macro_rules! bad_cst {
     ( $i:ident, $x:expr, $e:expr ) => {
         ($e).push(BadCstError::$i($x))
     };
+}
+
+macro_rules! bad_cst_user_error {
+    ( $i:ident, $n:expr, $e:expr ) => {
+        ($e).push(BadCstError {
+            reason: ErrorDetails::UserError(
+                UserError::$i,
+            ),
+            bad_node: $n,
+        })
+    }
 }
 
 macro_rules! bad_cst_child {
@@ -120,12 +131,7 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
                         let sref = self.interner.get_str_unchecked(istr);
                         ok_expr!(Literal::String(sref))
                     }
-                    None => self.errs.push(BadCstError {
-                        reason: ErrorDetails::UserError(
-                            UserError::IllFormedString,
-                        ),
-                        bad_node: n,
-                    }),
+                    None => bad_cst_user_error!(IllFormedString, n, self.errs),
                 },
                 "True" => ok_expr!(Bool(true)),
                 "False" => ok_expr!(Bool(false)),
@@ -152,7 +158,9 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
             _ => bad_cst_parent!(n, self.errs),
         }
     }
+}
 
+impl<'m, 't: 'm, 's: 't, V: AsRef<str>> ModuleWip<'m, 't, 's, V> {
     fn process_eliminator_pattern(
         &mut self,
         n: Node<'t>,
@@ -170,7 +178,15 @@ impl<'m, 't: 'm, 's: 't, V> ModuleWip<'m, 't, 's, V> {
         &mut self,
         pat: Pattern<'m, &'m str>,
     ) -> Result<Binding<'m, &'m str>, ()> {
-        unimplemented!()
+        let pat_s = pat.get;
+        let n = pat_s.node;
+        let p = pat_s.get;
+        use PatternCases::*;
+        match p {
+            Lit(l) => bad_cst_user_error!(LiteralPatternInBindingContext, n.clone(), self.errs),
+            Var(v) => Ok(Binding{get: vec![Pattern{get: Spanned{get: Var(v), node: n}}]}),
+            Elim(e) => bad_cst_user_error!(EliminatorPatternInBindingContext, n.clone(), self.errs),
+        }
     }
 
     fn process_record_pattern(
@@ -339,20 +355,18 @@ struct ValueDefinition<'m, V> {
 }
 
 #[derive(Debug)]
-struct ExprRef<'m, V> {
-    get: &'m mut Expr<'m, V>,
-    _a: PhantomData<V>,
+struct ExprRef<'t, V> {
+    get: &'t mut Expr<'t, V>,
 }
 
 #[derive(Debug)]
-struct PatRef<'m, V> {
-    get: &'m mut Pattern<'m, V>,
-    _a: PhantomData<V>,
+struct PatRef<'t, V> {
+    get: &'t mut Pattern<'t, V>,
 }
 
 #[derive(Debug)]
-struct Expr<'m, V> {
-    get: Spanned<'m, ExprCases<'m, V>>,
+struct Expr<'t, V> {
+    get: Spanned<'t, ExprCases<'t, V>>,
 }
 
 #[derive(Debug)]
@@ -365,6 +379,9 @@ enum ExprCases<'m, V> {
     // If statements are converted to case statements right away.
     Case(CaseExpr<'m, V>),
     Rec(Record<'m, V>),
+    // I'm not sure if this data representation is appropriate.
+    // If we have Foo.bar.baz, then we want to be able to represent it as
+    // a string plus an array of indices, or maybe a vector of interned strings.
     Proj {
         item: ExprRef<'m, V>,
         label: Variable<V>,
@@ -386,26 +403,26 @@ struct Variable<V> {
 }
 
 #[derive(Debug)]
-enum LetBinding<'m, V> {
-    Single(PlainLetBinding<'m, V>),
+enum LetBinding<'t, V> {
+    Single(PlainLetBinding<'t, V>),
     // Invariant: The vector must be non-empty.
-    Recursive(Vec<PlainLetBinding<'m, V>>),
+    Recursive(Vec<PlainLetBinding<'t, V>>),
 }
 
 /// We don't support pattern matching in bindings for now.
 /// Use explicit case instead.
 #[derive(Debug)]
-struct PlainLetBinding<'m, V> {
+struct PlainLetBinding<'t, V> {
     // Invariant: This vector is non-empty.
-    lhs: Binding<'m, V>,
-    rhs: ExprRef<'m, V>,
-    body: ExprRef<'m, V>,
+    lhs: Binding<'t, V>,
+    rhs: ExprRef<'t, V>,
+    body: ExprRef<'t, V>,
 }
 
 #[derive(Debug)]
-struct Binding<'m, V> {
+struct Binding<'t, V> {
     // Invariant: The list is non-empty and the first item is a variable.
-    get: Vec<Pattern<'m, V>>,
+    get: Vec<Pattern<'t, V>>,
 }
 
 #[derive(Debug)]
@@ -434,7 +451,7 @@ struct Pattern<'m, V> {
 impl<'m, V> Pattern<'m, V> {
     fn try_into_binding<'t: 'm>(
         self,
-        errs: &mut Errors<'t>,
+        errs: &mut Errors<'m>,
     ) -> Result<Binding<'m, &'m str>, ()> {
         unimplemented!()
     }
@@ -467,7 +484,9 @@ struct Record<'m, V> {
 
 #[derive(Debug)]
 enum RecordField<'m, V> {
+    // { ~x }
     Punny(Variable<V>),
+    // { l = e }
     Plain {
         label: Variable<V>,
         value: ExprRef<'m, V>,
@@ -496,6 +515,10 @@ pub enum InternalError {
 pub enum UserError {
     IllFormedInteger,
     IllFormedString,
+    /// let 10 = blep, let () = boop
+    LiteralPatternInBindingContext,
+    /// let Foo = blep, let Tuple a b = boop
+    EliminatorPatternInBindingContext,
 }
 
 use self::ErrorDetails::*;
@@ -539,7 +562,7 @@ impl<'m> Module<'m, &'m str> {
         src: &'s str,
         tree: &'t Tree,
         p: &'t mut Pools<&'m str>,
-    ) -> Result<Module<'m, &'m str>, Errors<'t>> {
+    ) -> Result<Module<'m, &'m str>, Errors<'m>> {
         let n = tree.root_node();
         if n.kind() != "source_file" {
             return Err(Errors::new(vec![BadCstError::is_unexpected_child(n)]));
