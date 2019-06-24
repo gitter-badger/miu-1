@@ -34,7 +34,7 @@ Principles
    ``|``, "No unifying theme
             or (``|``, ``||``),
             application (``|>``, ``>|>``),
-            such that (comprehension/refinement)", ""
+            such that (comprehension)", ""
    "``,``", "sequence", ""
    ``*``, "applicative (``>*>``)", ""
    ``;``, "monadic (``>;>``)", ""
@@ -44,7 +44,7 @@ Principles
    ``->``, "function arrow, then (if/case)", ""
    ``->?``, "pattern", ""
    ``#``, "primitive", ""
-   ``@``, "optics?, type applications? memory address?", ""
+   ``@``, "optics?, type applications? memory address? refinement?", ""
    ``^``, "", ""
 
 ****************
@@ -223,7 +223,7 @@ We need a lot of bracket forms :(
 1. Types - Rows (?), Records (``{ }``?), Variants (?), Tuples (?)
            effects (prefix ``[ ]``?), units of measure (postfix ``[ ]``),
            implicit arguments (?),
-           refinements (``{| |}``?)
+           refinements (``{@ @}``?)
 2. Terms - Rows (?), Records ``{ }``, Variants (?), Tuples (?),
            suspensions (``{ }``?, ``~( )``?), units of measure (?),
            sequences (?), quasiquotes (?), macros (?)
@@ -419,6 +419,9 @@ adding a bunch of sugar.
 
 ``do`` blocks
 -------------
+
+Indexing syntax
+---------------
 
 *************
 Scoping rules
