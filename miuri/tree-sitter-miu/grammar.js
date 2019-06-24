@@ -101,7 +101,7 @@ module.exports = grammar({
         // NOTE: Since we allow whitespaces everywhere, tree-sitter ends up
         path: $ => pathRegex(),
 
-        // In expression contexts, we use extended_path
+        // See the spec document for why extended paths are present.
         extended_path: $ => extendedPathRegex(),
 
         type: $ => choice(

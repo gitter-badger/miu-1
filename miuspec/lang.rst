@@ -412,6 +412,64 @@ adding a bunch of sugar.
 ``do`` blocks
 -------------
 
+Record updates
+--------------
+
+Not really sure of how many of these will be implemented in the end (because
+there does seem to be some overlap in terms of functionality). But I've just
+written these down as possible ideas.
+
+Extended paths
+""""""""""""""
+
+When one is updating records, it is often the case that we want to
+compute the next state using the previous state. We introduce "extended paths"
+for this::
+
+    let move_up_diag pt = {pt with x = .x + 1, y = .y + 1}
+
+which desugars to
+::
+    let move_up_diag pt = {pt with x = pt.x + 1, y = pt.y + 1}
+
+More complex expressions also work.
+::
+    {(foo bar blah) with x = .x + 1, y = .y + 1}
+
+desugars to
+::
+    let r = foo bar blah in {r with x = r.x + 1, y = r.y + 1}
+
+In the presence of nesting, the nearest expression is used.
+::
+    {r with x = {.x with a = f .a}}
+
+desugars to
+::
+    {r with x = {r.x with a = f r.x.a}}
+
+Implicit ``with``
+"""""""""""""""""
+
+When updating nested records, we're often updating based on the previous field
+value. So respecifying the name isn't so useful.
+::
+    {r with longFieldName = {.longFieldName with a = f .a}}
+
+We can shorten that to
+::
+    {r with longFieldName = {with a = f .a}}
+
+This means that the implicit ``with`` doesn't work for the outermost record
+constructor, making this idea a bit inelegant.
+
+Nested label update
+"""""""""""""""""""
+
+Allow paths to be used in label positions
+::
+    {r with x.a = f .x.a}
+
 *************
 Scoping rules
 *************
