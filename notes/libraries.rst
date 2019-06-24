@@ -14,6 +14,7 @@ Base.Foldable - Foldable, Traversable
 Base.Foldable.Newtypes -
 Base.Foldable.Mono - MonoFoldable, MonoFilterable, MonoTraversable, MonoWitherable
 Base.Functor - Functor, Apply, Applicative, Alt, Alternative, Bind, Monad, MonadPlus
+  - ``some`` -> ``oneOrMore``, ``many`` -> ``zeroOrMore``, ``optional`` -> ``zeroOrOne``
 Base.Functor.Newtypes -
 Base.Functor.Mono - MonoFunctor
 Base.Bifunctor - ...
