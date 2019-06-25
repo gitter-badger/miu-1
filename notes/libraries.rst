@@ -33,10 +33,13 @@ Base.Comparison.Newtypes -
 Base.Natural - Nat64, Natural, ...
 Base.Natural.Newtypes -
 Base.Integer - Int64, Integer, ...
+  - tentative operators: + = safe add, +? = checked add, +! = trapping add,
+                         +^ = saturating add, +& = wrapping add
 Base.Integer.Newtypes -
 Base.Float   - Float64, Decimal, ...
 Base.Float.Newtypes -
 Base.FixedPoint - ...
+Base.Bits - bitwise operations
 
 Base.Bool -
 Base.Maybe -
