@@ -13,7 +13,7 @@ chasing a pointer stashed inside the block.
   the detail that repr = size is not really relevant. The only important thing
   is that we're able to compute composite representations out of primitive ones
   at runtime.
-* value of kind `k` = this is shorthand for "value of some type `t` of kind `k`"
+* value of kind `k` = shorthand for "value of some type `t` of kind `k`"
 
 ## Requirements
 
@@ -27,30 +27,28 @@ chasing a pointer stashed inside the block.
 NOTE: package/module documentation should make it clear whether the
 corresponding module permits specialization or not.
 
-NOTE: Passing reprs across module boundaries *implicitly* breaks separate
+NOTE: passing reprs across module boundaries *implicitly* breaks separate
 compilation. In C/C++, if you want to access a struct in an unboxed fashion,
 you need to write the implementation in a header -- this is essentially the same
 problem. This means that if people hand-write interfaces (to take advantage of
 separate compilation during development), but forget to write down the modules
 for the reprs, we need to fall back to boxing like OCaml. TODO: I need to think
-this through fully. We should be able to seamlessly work
+this through fully. A situation where some modules rely on boxing and others
+don't should still work.
 
 ## Word identification
 
-For simplicity, let's say we have a tricolor GC that goes through the words
-and is trying to mark things. Every word is in one of four possible states,
-based on its lowest three bits -
+How does the GC identify whether a word represents a pointer that should be
+followed for checking liveness or not? Every word is in one of four possible
+states, based on its lowest three bits -
 
 * xx0 → Int/Nat
 * 001 → Pointer to GCed block.
 * 101 → Pointer to non GCed "thing". The "thing" could be static data, a Miu
   block in C heap, a bytearray, a record with only primitive types
   (bytearray like), or some combination thereof.
-* x11 → Block header. The remaining bits should be inspected to understand the
-  block layout.
-
-Aside: We could special case Maybe Int/Maybe Nat/Maybe (Ref a) to
-take only 1 word, with 0...01 representing Nothing.
+* x11 → Block header. The top bits in the word should be inspected to understand
+  the block layout.
 
 A block may be stack allocated (using `alloca` if the repr is determined
 at runtime), or heap allocated.
@@ -67,6 +65,9 @@ extra book-keeping is needed. An alternative to this approach is having
 fat pointers which consist of a header pointer and an offset, but that creates
 a problem of memory usage (1 extra word per pointer).
 
+So maybe in most cases, we use fat pointers, but we allow yet another
+"thin pointer" type that is always guaranteed to point to a block header?
+
 ## Block layout
 
 Minimum block size = 1 word (?)
@@ -77,21 +78,30 @@ There are two built-in kinds -
 * `Type` → I might contain pointers that the GC needs to inspect.
   Alignment = 1 word.
 
-  | Class      | Description | Examples         | Size             |
-  |:----------:|:-----------:|:-----------------|:-----------------|
-  | Primitive  |             | `Int`, `Nat`     | 1 word           |
-  | Zero-sized |             | `Unit`           | 0 words          |
-  | Composite  | Has header  | `MkPair Int Int` | N words (N >= 2) |
+  | Class       | Description  | Examples         | Size            |
+  | :---------: | :----------: | :--------------- | :-------------- |
+  | Primitive   |              | `Int`, `Nat`     | 1 word          |
+  | Zero-sized  |              | `Unit`           | 0 words         |
+  | Composite   | Has header   | `MkPair Int Int` | N words (N ≥ 2) |
 
 * `PrimType` → I do not contain pointers that the GC needs to check.
-  Alignment <= 1 word.
+  Alignment ≤ 1 word.
 
-  | Class     | Description | Examples                    | Size |
-  |:---------:|:-----------:|:----------------------------|:-----|
-  | Primitive |             | `Int64#`, `Int32#`, `Nat8#` | Any  |
-  | Composite | No header   | `MkPoint# Int16# Int16#`    | Any  |
+  | Class      | Description  | Examples                     | Size  |
+  | :--------: | :----------: | :--------------------------- | :---- |
+  | Primitive  |              | `Int64#`, `Int32#`, `Nat8#`  | Any   |
+  | Composite  | No header    | `MkPoint# Int16# Int16#`     | Any   |
 
 ### Potential issues
+
+#### How are type variables of kind `Row` represented at runtime?
+
+I think that the repr for a row variable can be the size. Well, what do we
+mean by "size" for a row variable? If it is used in a sum context, it has to be
+the max of sizes of all types involved. If it is used in a product context, it
+has to be the sum of sizes of all types involved. If it is used in both
+contexts (not sure why you'd do that, but let's go with it...), then you'd
+supply both.
 
 #### How are user-defined kinds handled?
 
@@ -109,14 +119,14 @@ This [question](https://stackoverflow.com/q/28898277/2682729) indicates that
 some data types need alignment more than the word size. One example is SIMD
 vectors, say `Int32x4#`. This messes things up for types of kind `Type`,
 because we can't just proceed with alignment = word size if we want to allow
-these :( :( :(. In theory, there's nothing stopping us from creating two more
+these :( :( :(. In *theory*, there's nothing stopping us from creating two more
 kinds:
 
 ```
                           --> = can be contained in
 
               PrimType       --------------->       Type
-    (size = n bytes, align <= 1 word)  (size = n words, align = 1 word)
+    (size = n bytes, align ≤ 1 word)  (size = n words, align = 1 word)
                  |           \                       |
                  |            +----------------+     |
                  v                              \    v
@@ -138,9 +148,9 @@ it doesn't look very ergonomic as one has to use getters and setters.
 #### Separate compilation for PrimType
 
 TODO: Add some information on how we handle separate compilation with types of
-kind `PrimType`; it be possible, otherwise people will actively avoid using
-`PrimType`. One possible solution (I think?) is that we pass alignment along
-with the size specifically for `PrimType`.
+kind `PrimType`; it should be possible, otherwise people will actively avoid
+using `PrimType`. One possible solution (I think?) is that we pass alignment
+along with the size specifically for `PrimType`.
 
 For example, we could add alignment information in the top bits. Computing the
 new size and new alignment on combination can be done with a few instructions.
@@ -173,31 +183,45 @@ a polymorphic function, then you need to use a type from ``Type``.
 
 ### Block layout details
 
-Memory layout of blocks (inspired by that of OCaml & Sixten):
+NOTE: It is not clear to me whether supporting 32-bit architectures is worth
+the extra complexity. For example, Ubuntu has stopped new releases for 32-bit
+only libraries.
+
+rough memory layout of blocks (inspired by that of [OCaml](http://dev.realworldocaml.org/runtime-memory-layout.html)):
 
 ```
-                                               +--- 2-bit "IsHeader" tag
-                                               v
-  +------------------|-----------|-----------|----|----------|--------------|-----
-  |     metadata     |  tag byte | GC colour | 11 | value[0] |   value[1]   | ...
-  +------------------|-----------|-----------|----|----------|--------------|-----
-   <----52 bits-----> <--8 bit--> <--2 bit-->
+  64-bit system
+                                             +--- 2-bit "IsHeader" tag
+                                             v
+  +----------------|-----------|-----------|----|----------|--------------|-----
+  |    metadata    |  tag byte | GC colour | 11 | value[0] |   value[1]   | ...
+  +----------------|-----------|-----------|----|----------|--------------|-----
+   <---52 bits----> <--8 bit--> <--2 bit-->
+
+  32-bit system
+                                          +--- 2-bit "IsHeader" tag
+                                          v
+  +-------------|-----------|-----------|----|---------------|--------------|-----
+  |   metadata  |  tag byte | GC colour | 11 |    metadata   |   value[0]   | ...
+  +-------------|-----------|-----------|----|---------------|--------------|-----
+   <--20 bits--> <--8 bit--> <--2 bit-->      <---32 bits--->
+
 ```
 
-The block contains a 64-bit header (let's assume it is the same on 32-bit
-systems), which is divided as shown above. The overall size is some multiple of
-the word size, including padding as necessary (the diagram doesn't show any
-padding). The space taken up by each value need not be a multiple of the word
+The block contains a 64-bit header (in most cases), divided as shown above.
+The total size is some multiple of the word size, including padding as
+necessary (the diagram doesn't show any padding).
+The space taken up by each value need not be a multiple of the word
 size, due to the presence of values of kind `PrimType`.
 
 ```
-type F (a# : PrimType) : Type = { first : a#, second : a# }
+type PrimPair (a# : PrimType) : Type = { first : a#, second : a# }
 -- Say at runtime, we get the info, that size of a# is 4 bytes, and the
--- alignment is 2 bytes. Can we compute the size of F a# and the offsets
+-- alignment is 2 bytes. Can we compute the size of PrimPair a# and the offsets
 -- for each field? Yes! We basically run the functions that the compiler
--- would run at compile time, but run them at runtime instead! The only
--- difference is that computing a highly optimized layout might be too
--- expensive at runtime, because we need to do so repeatedly.
+-- would use at compile time, but at runtime instead! The only difference is
+-- that computing a highly optimized layout might be too expensive at runtime,
+-- because we need to do so repeatedly.
 ```
 
 The next question is: what are the possible values for the tag byte and metadata,
@@ -209,7 +233,8 @@ A data type is either:
 
 * a built-in
   - `Ref a` (fat pointer to block)
-* a newtype, i.e., a sum with only 1 constructor or a product with only 1 field → a newtype shares the layout of the type
+* a newtype, i.e., a sum with only 1 constructor or a product with only 1 field
+  → a newtype shares the layout of the type
 * a closed sum type with 2 or more constructors
 * a closed product type with two or more fields
 * an open sum type (polymorphic variant from OCaml)
@@ -222,42 +247,76 @@ PF = pointy fields, PA = pointy arrays
 NPF = non-pointy fields, NPA = non-pointy arrays
 
 Different tag options:
-* Ordinary tag for a sum type (251 / 256)
-  + TODO: How to interpret metadata? Special casing for inline records (or equiv.)?
-* Polymorphic variant tag (1 / 256)
-  + Block size: metadata (including header)
-  + Next word is unique ID for variant name (probably a hash result).
-  + Fields are stored in the body (no additional indirection unlike OCaml).
+* Ordinary tag for a sum type (? / 256)
 * Fatpointer to block (1 / 256)
   + Block size: 2 words (including header)
   + Next word is pointer to block
   + metadata is interpreted as offset in block
-* NPF NPA (a.k.a. bytearray-like) (1 / 256)
-  + Block size: metadata (including header)
-* PF NPF NPA (1 / 256)
-  + Metadata interpreted as pair of sizes for PF and NPF + NPA respectively
-    (how many bits each?)
-* NPF PF PA (1 / 256)
-  + Metadata interpreted as pair of sizes for NPF and PF + PA respectively
-    (how many bits each?)
+* Polymorphic variant tag (1 / 256)
+  + Next word is unique ID for variant name (probably a hash result).
+  + Fields are stored in the body (no additional indirection unlike OCaml).
+    However, this means that "up-casting" incurs a data copy if the size needs
+    to be increased -- why? because the block might be allocated at an
+    allocation boundary and if we treat it to have larger size than it actually
+    is, then copying it later will cause a segfault.
+
+Number of metadata bits used for describing sizes in different situations (32-bit/64-bit) -
+
+  | Type\PrimType | Zero  | Little  | A lot  |
+  | :------------ | :---- | :------ | :----- |
+  | Zero          | X     | 17/49   | 32/49  |
+  | Little        | 17/49 | 49/49   | 49/49  |
+  | A lot         | 32/49 | 49/49   | 64/113 |
+
+8 possible states = 3 bits of metadata
+
+The table probably needs some explanation. Consider the following examples:
+
+1. 64-bit arch. Top 3 bits of 52-bit metadata indicates `Little/Little`.
+   Tag byte is some ordinary sum type tag.
+   Bottom 49 bits of metadata are `0[Type size][PrimType size]`, each size taking
+   24 bits (say). Say `[Type size] = 8` and `[PrimType size] = 6`. This
+   means that GC needs to traverse next 8 words (after header) to check for pointers
+   (recursively), and the total block size is 1 + 8 + 6 = 15 words.
+2. 32-bit arch. Top 3 bits of 20-bit metadata indicate `Little/A lot`.
+   Tag byte is for a open variant.
+   Bottom 17 bits of metadata are `0[Type size]`.
+   The next word is the open variant tag.
+   There is an extra metadata word after the open variant tag for
+   `[PrimType size]`.
+   Say `[Type size] = 3` and `[PrimType size] = 10`.
+   The GC needs to traverse the next 3 words after the extra metadata word
+   (the third in the block) to check for pointers (recursively).
+   The total block size is 1 + 1 + 1 + 3 + 10 = 15 words.
+3. 64-bit arch. Top 3 bits of metadata indicate `Zero/A lot` (there is no
+   meaningful distinction betwen `Zero/Little` and `Zero/A lot` on 64-bit,
+   so say we default to the latter).
+   Tag byte is some ordinary sum type tag.
+   Bottom 49 bits of metadata are `0[PrimType size]`.
+   This block represents a byte-array like structure, such as a string, or an
+   array of floating point values.
 
 #### Open sums and products via row types
 
 ```
-Containment translates to an offset array.
-Combination translates to a boolean array.
-
-(λr. r.x) : forall t z. (| x ◃ t |) ⊆ z => Record z -> t
+(λ r. r.x) : ∀ t z. (| x ◃ t |) ⊆ z ⇒ Record z → t
 -->
-(λr. r.x) : Repr "t" -> Repr "z" -> OffsetArray [("x", "z")] -> Record z -> t
+(λ r. r.x) : Repr "t" → Repr Prod "z" → OffsetArray [("x", "z")] → Record z → t
 
-z 1 ⊙ z 2 ∼ z 3 --> Array is-z1-or-z2
+(λ m n. m ★ n) : ∀ z1 z2 z3. z 1 ⊙ z 2 ∼ z 3 → Record z1 → Record z2 → Record z3
+-->
+(λ m n. m ★ n) : Repr Prod "z1" → Repr Prod "z2" → Repr Prod "z3"
+               → Array (Bool, Offset) → Record z1 → Record z2 → Record z3
 
 f : {x : int, y : int | r} -> int
 let p = {x = 10, y = 20, z = 30}
 let x = f @x.offset @y.offset p
-
 ```
+
+Containment translates to an offset array.
+Combination translates to an (bool, offset) array.
+
+I've written "array", but we could do SROA (or not) depending on the situation...
 
 #### Different built-in arrays
 
@@ -339,7 +398,7 @@ for large values, capture them by reference.
 
 Q: What about currying?
 
-Look at: Making a fast curry Push/enter vs eval/apply for higher-order languages
+Look at: Making a fast curry push/enter vs eval/apply for higher-order languages
 
 ### Lazy values
 
@@ -351,9 +410,9 @@ makes lazy values thread-safe. The approach there seems worth investigating.
 
 ### Polymorphic fields
 
-* We can pass sizes like Sixten for layout.
-  For higher-kinded type variables, we pass a closure that computes the size
-  (again like Sixten).
+* We can pass type representation at runtime to compute layout information
+  (like Sixten). For higher-kinded type variables, we pass a closure that
+  computes the representation (again like Sixten).
 * If the kind of the type variable is ``Type``, then the polymorphic field is
   fitted into the pointy-space. If the kind is ``PrimType``, then it is fitted
   into the non-pointy space.
