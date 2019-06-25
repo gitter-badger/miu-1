@@ -1,6 +1,10 @@
 The Miu Programming Language (美雨)
 ###################################
 
+.. image:: https://badges.gitter.im/miu-dev/community.svg
+   :alt: Join the chat at https://gitter.im/miu-dev/community
+   :target: https://gitter.im/miu-dev/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+
 Prerequisites
 =============
 
